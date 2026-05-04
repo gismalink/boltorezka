@@ -102,9 +102,9 @@ Exit criteria:
 #### Phase D finalization evidence (2026-03-04)
 
 - Внешний static delivery path выведен в test через split ingress routing:
-   - API matcher paths (`/v1*`, `/health`, `/version`, `/metrics`) -> `boltorezka-api-test`,
-   - default web paths (и совместимый `/__web/*`) -> `boltorezka-web-test`.
-- В `boltorezka` host compose поднят отдельный web static service и deploy scripts переведены на `api+web` rollout.
+   - API matcher paths (`/v1*`, `/health`, `/version`, `/metrics`) -> `datowave-api-test`,
+   - default web paths (и совместимый `/__web/*`) -> `datowave-web-test`.
+- В `datowave` host compose поднят отдельный web static service и deploy scripts переведены на `api+web` rollout.
 - После принудительного recreate `edge-caddy` выполнен postdeploy smoke:
    - `smoke:sso` PASS,
    - `smoke:api` PASS,
@@ -130,13 +130,13 @@ Rollback action:
 ## 6) Test-first command template
 
 ```bash
-ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/<branch> npm run deploy:test:smoke'
+ssh mac-mini 'cd ~/srv/datowave && TEST_REF=origin/<branch> npm run deploy:test:smoke'
 ```
 
 Для исключения (только по явному решению):
 
 ```bash
-ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test:smoke'
+ssh mac-mini 'cd ~/srv/datowave && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test:smoke'
 ```
 
 ## 7) Ownership

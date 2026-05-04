@@ -67,7 +67,7 @@ const chatStorageProvider = toTrimmedLower(process.env.CHAT_STORAGE_PROVIDER || 
   : "localfs";
 const webPushPublicKey = toTrimmed(process.env.WEB_PUSH_PUBLIC_KEY || "");
 const webPushPrivateKey = toTrimmed(process.env.WEB_PUSH_PRIVATE_KEY || "");
-const webPushSubject = toTrimmed(process.env.WEB_PUSH_SUBJECT || "mailto:ops@boltorezka.local") || "mailto:ops@boltorezka.local";
+const webPushSubject = toTrimmed(process.env.WEB_PUSH_SUBJECT || "mailto:ops@datowave.local") || "mailto:ops@datowave.local";
 const webPushEnabled = parseBoolean(process.env.WEB_PUSH_ENABLED, false)
   && Boolean(webPushPublicKey)
   && Boolean(webPushPrivateKey);
@@ -88,7 +88,7 @@ export const config: AppConfig = {
     ? authSsoRequestTimeoutMsRaw
     : 5000,
   authCookieMode: parseBoolean(process.env.AUTH_COOKIE_MODE, false),
-  authSessionCookieName: toTrimmed(process.env.AUTH_SESSION_COOKIE_NAME || "boltorezka_session") || "boltorezka_session",
+  authSessionCookieName: toTrimmed(process.env.AUTH_SESSION_COOKIE_NAME || "datowave_session") || "datowave_session",
   authSessionCookieSecure: parseBoolean(process.env.AUTH_SESSION_COOKIE_SECURE, true),
   authSessionCookieSameSite,
   authSessionCookieDomain: toTrimmed(process.env.AUTH_SESSION_COOKIE_DOMAIN || ""),
@@ -98,7 +98,7 @@ export const config: AppConfig = {
     : 60 * 60 * 24 * 30,
   smokeAuthBootstrapEnabled: parseBoolean(
     process.env.SMOKE_AUTH_BOOTSTRAP_ENABLED,
-    String(process.env.AUTH_SESSION_COOKIE_NAME || "boltorezka_session").includes("_test")
+    String(process.env.AUTH_SESSION_COOKIE_NAME || "datowave_session").includes("_test")
   ),
   allowedReturnHosts: parseCsv(process.env.ALLOWED_RETURN_HOSTS),
   superAdminEmail: toTrimmedLower(process.env.SUPER_ADMIN_EMAIL || "gismalink@gmail.com"),

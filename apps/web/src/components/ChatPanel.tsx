@@ -423,8 +423,8 @@ export function ChatPanel({
         container.scrollTop = container.scrollHeight;
       });
     };
-    window.addEventListener("boltorezka:chat:own-send", handler);
-    return () => window.removeEventListener("boltorezka:chat:own-send", handler);
+    window.addEventListener("datowave:chat:own-send", handler);
+    return () => window.removeEventListener("datowave:chat:own-send", handler);
   }, [chatLogRef]);
 
   // Звуковой mute активного топика: учитываем notificationMode === "none"

@@ -35,7 +35,7 @@ function buildDesktopHandoffDeepLink(code: string, targetUrl: string, attemptId:
   target.searchParams.set("desktop_sso_code", code);
   target.searchParams.set("desktop_sso_complete", "1");
   target.searchParams.set("desktop_handoff_attempt", attemptId);
-  return `boltorezka://${host}/auth/sso-complete?attemptId=${encodeURIComponent(attemptId)}&target=${encodeURIComponent(target.toString())}`;
+  return `datowave://${host}/auth/sso-complete?attemptId=${encodeURIComponent(attemptId)}&target=${encodeURIComponent(target.toString())}`;
 }
 
 async function waitForDesktopHandoffCompletion(token: string, attemptId: string) {
@@ -168,7 +168,7 @@ export class AuthController {
     this.options.setToken("");
     this.options.setUser(null);
 
-      if (typeof window !== "undefined" && window.boltorezkaDesktop) {
+      if (typeof window !== "undefined" && window.datowaveDesktop) {
         this.options.pushLog("desktop local logout complete");
         return;
       }

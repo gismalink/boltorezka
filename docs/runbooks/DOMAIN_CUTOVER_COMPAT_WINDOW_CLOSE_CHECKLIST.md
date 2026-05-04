@@ -11,20 +11,20 @@
 
 - Окно совместимости официально завершено или отменено решением владельца релиза.
 - Cleanup-изменения уже в `origin/main` (никаких feature ref для `prod`).
-- На сервере `~/srv/boltorezka` и `~/srv/edge` нет незакоммиченных ручных правок.
+- На сервере `~/srv/datowave` и `~/srv/edge` нет незакоммиченных ручных правок.
 
 ## Day-of Commands (ready-to-run)
 
 1) Deploy cleanup в `prod` (из `main`):
 
 ```bash
-ssh -t mac-mini 'cd ~/srv/boltorezka && PROD_REF=origin/main npm run deploy:prod'
+ssh -t mac-mini 'cd ~/srv/datowave && PROD_REF=origin/main npm run deploy:prod'
 ```
 
 2) Обязательный post-change smoke (SSO routing + redirect map + web static):
 
 ```bash
-ssh -t mac-mini 'cd ~/srv/boltorezka && SMOKE_API_URL=https://datowave.com npm run smoke:sso:routing && SMOKE_REDIRECT_SCOPE=prod npm run smoke:redirect-map && SMOKE_API_URL=https://datowave.com SMOKE_WEB_BASE_URL=https://datowave.com npm run smoke:web:static'
+ssh -t mac-mini 'cd ~/srv/datowave && SMOKE_API_URL=https://datowave.com npm run smoke:sso:routing && SMOKE_REDIRECT_SCOPE=prod npm run smoke:redirect-map && SMOKE_API_URL=https://datowave.com SMOKE_WEB_BASE_URL=https://datowave.com npm run smoke:web:static'
 ```
 
 3) Быстрый edge/runtime контроль (`prod`):

@@ -16,7 +16,7 @@ Execution reference:
 
 ## 1) Цель
 
-Документ определяет, когда и как Boltorezka должна перейти от текущего P2P/TURN baseline к SFU-топологии: с измеримыми входными gate, политикой отката и поэтапным rollout.
+Документ определяет, когда и как Datowave должна перейти от текущего P2P/TURN baseline к SFU-топологии: с измеримыми входными gate, политикой отката и поэтапным rollout.
 
 ## 2) Текущий baseline и ограничения
 
@@ -70,7 +70,7 @@ Execution reference:
 ## 5) Целевая архитектура (гибрид)
 
 Control plane:
-- Текущий `boltorezka-api` остается источником истины для auth, room membership и signaling authorization.
+- Текущий `datowave-api` остается источником истины для auth, room membership и signaling authorization.
 
 Media routing:
 - Добавить SFU-сервис как media plane для комнат выше порога.
@@ -109,7 +109,7 @@ Stage C: Canary и сравнение
 
 Stage C status update (2026-03-09):
 - Добавлен автоматизированный compare gate `smoke:compare:sfu-livekit` (`scripts/smoke/compare-sfu-livekit-baseline.sh`).
-- В `test` выполнен baseline compare на SHA `8b996e8`, артефакт: `~/srv/boltorezka/.deploy/compare-sfu-livekit-20260309T085858Z.md`.
+- В `test` выполнен baseline compare на SHA `8b996e8`, артефакт: `~/srv/datowave/.deploy/compare-sfu-livekit-20260309T085858Z.md`.
 - Результат: `sfu-current=pass`, `livekit-topology=pass`, livekit signaling guard `pass` (`LiveKitSignalingDisabled`).
 
 Stage D: Default LiveKit в test -> prod readiness

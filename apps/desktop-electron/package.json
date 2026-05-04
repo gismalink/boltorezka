@@ -1,12 +1,12 @@
 {
-  "name": "boltorezka-desktop",
+  "name": "datowave-desktop",
   "private": true,
   "version": "1.0.0",
   "engines": {
     "node": ">=22.12.0"
   },
-  "description": "Electron desktop shell for Boltorezka",
-  "author": "Boltorezka Team",
+  "description": "Electron desktop shell for Datowave",
+  "author": "Datowave Team",
   "main": "src/main.cjs",
   "scripts": {
     "dev": "concurrently -k -n WEB,DESKTOP -c cyan,green \"npm --prefix ../web run dev -- --host 127.0.0.1 --port 5173\" \"wait-on tcp:127.0.0.1:5173 && cross-env ELECTRON_RENDERER_URL=http://127.0.0.1:5173 electron .\"",
@@ -24,8 +24,8 @@
     "dmg-license": "^1.0.11"
   },
   "build": {
-    "appId": "art.gismalink.boltorezka.desktop",
-    "productName": "Boltorezka",
+    "appId": "art.gismalink.datowave.desktop",
+    "productName": "Datowave",
     "directories": {
       "output": "dist"
     },
@@ -55,8 +55,8 @@
       "entitlements": "entitlements.mac.plist",
       "entitlementsInherit": "entitlements.mac.plist",
       "extendInfo": {
-        "NSCameraUsageDescription": "Boltorezka uses your camera for voice and video rooms.",
-        "NSMicrophoneUsageDescription": "Boltorezka uses your microphone for voice and video rooms."
+        "NSCameraUsageDescription": "Datowave uses your camera for voice and video rooms.",
+        "NSMicrophoneUsageDescription": "Datowave uses your microphone for voice and video rooms."
       }
     },
     "win": {

@@ -13,7 +13,7 @@ if [[ -z "$job_id" ]]; then
   exit 1
 fi
 
-label="com.boltorezka.scheduler.${job_id}"
+label="com.datowave.scheduler.${job_id}"
 plist_path="$HOME/Library/LaunchAgents/${label}.plist"
 
 mkdir -p "$HOME/Library/LaunchAgents"

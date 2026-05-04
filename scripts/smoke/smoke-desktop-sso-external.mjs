@@ -23,7 +23,7 @@ async function ensureRootLoaded(page) {
 }
 
 async function getLastExternalUrl(app) {
-  return app.evaluate(() => String(global.__boltorezkaLastExternalUrl || ""));
+  return app.evaluate(() => String(global.__datowaveLastExternalUrl || ""));
 }
 
 async function main() {
@@ -56,7 +56,7 @@ async function main() {
     }
 
     await app.evaluate(() => {
-      global.__boltorezkaLastExternalUrl = "";
+      global.__datowaveLastExternalUrl = "";
     });
 
     await ensureRootLoaded(page);

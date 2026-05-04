@@ -5,7 +5,7 @@ import { createRequire } from "module";
 import { _electron as electron } from "playwright";
 
 /**
- * @typedef {Window & { __boltorezkaDesktopSmokeTrack?: () => void }} SmokeWindow
+ * @typedef {Window & { __datowaveDesktopSmokeTrack?: () => void }} SmokeWindow
  */
 
 const repoDir = process.cwd();
@@ -55,8 +55,8 @@ async function main() {
 
     await page.evaluate(() => {
       const smokeWindow = window;
-      if (typeof smokeWindow.__boltorezkaDesktopSmokeTrack === "function") {
-        smokeWindow.__boltorezkaDesktopSmokeTrack();
+      if (typeof smokeWindow.__datowaveDesktopSmokeTrack === "function") {
+        smokeWindow.__datowaveDesktopSmokeTrack();
       }
     });
 

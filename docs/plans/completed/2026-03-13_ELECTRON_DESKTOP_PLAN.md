@@ -1,6 +1,6 @@
 # Electron Desktop Plan (2026-03-13)
 
-Цель: выпустить desktop-версию Boltorezka с максимальным переиспользованием текущего web-клиента, без регрессий в realtime/voice/video и с соблюдением текущего GitOps-процесса (feature -> test -> smoke -> main -> prod).
+Цель: выпустить desktop-версию Datowave с максимальным переиспользованием текущего web-клиента, без регрессий в realtime/voice/video и с соблюдением текущего GitOps-процесса (feature -> test -> smoke -> main -> prod).
 
 Platform split (2026-03-17):
 - Windows backlog: `docs/plans/2026-03-17_ELECTRON_DESKTOP_WINDOWS_PLAN.md`
@@ -16,7 +16,7 @@ Platform split (2026-03-17):
 ## 1) Scope v1
 
 In scope (MVP):
-- [x] Запуск Boltorezka как standalone desktop app (macOS).
+- [x] Запуск Datowave как standalone desktop app (macOS).
 - [x] Auth flow (SSO/login/logout) без деградации текущего web-поведения.
 - [x] Voice/video/screen share в parity с web (для текущего web-hosted desktop shell на test).
 - [x] Выбор input/output устройств, mute/unmute, reconnect behavior.
@@ -258,15 +258,15 @@ Progress note (2026-03-13, M2 validation checkpoint):
 
 Progress note (2026-03-13, auth hardening dependency):
 - P1 пункты `rate limits` и `structured auth logs/audit trail` закрыты.
-- `SLO/baseline` evidence закрыт server-side прогоном `~/srv/boltorezka/scripts/ops/scheduler/run-job.sh slo-rolling-gate`: `SLO_ROLLING_STATUS=pass`, `SLO_ROLLING_ALERT_COUNT=0` (2026-03-13T17:52:39Z).
+- `SLO/baseline` evidence закрыт server-side прогоном `~/srv/datowave/scripts/ops/scheduler/run-job.sh slo-rolling-gate`: `SLO_ROLLING_STATUS=pass`, `SLO_ROLLING_ALERT_COUNT=0` (2026-03-13T17:52:39Z).
 
 Progress note (2026-03-13, M2 stability automation):
 - Добавлен `scripts/smoke/smoke-desktop-soak.mjs` и root command `npm run smoke:desktop:soak` (повторяющиеся offline/online reconnect циклы в одном Electron run).
-- Test evidence: `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SOAK_CYCLES=4 npm run smoke:desktop:soak` -> PASS.
+- Test evidence: `SMOKE_WEB_BASE_URL=https://test.datowave.com SMOKE_DESKTOP_SOAK_CYCLES=4 npm run smoke:desktop:soak` -> PASS.
 
 Progress note (2026-03-13, M2 full chain):
 - Добавлен агрегированный command `npm run desktop:smoke:m2:soak`.
-- Test evidence: `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SOAK_CYCLES=3 npm run desktop:smoke:m2:soak` -> PASS (foundation/runtime/reconnect/telemetry/soak).
+- Test evidence: `SMOKE_WEB_BASE_URL=https://test.datowave.com SMOKE_DESKTOP_SOAK_CYCLES=3 npm run desktop:smoke:m2:soak` -> PASS (foundation/runtime/reconnect/telemetry/soak).
 
 Progress note (2026-03-15, release-grade signing gate prep):
 - Runbook `docs/runbooks/DESKTOP_SIGNING_READINESS_RUNBOOK.md` расширен release-grade матрицей (macOS/Windows), evidence checklist и verification command skeletons.
@@ -347,7 +347,7 @@ Progress note (2026-03-14, RTC reconnect/state stabilization):
 - Исправлен transient RTC/regression UX после multi-client входов: realtime-presence reset теперь выполняется только при `wsState=disconnected` (не на `connecting`).
 - Для voice-enabled комнат включено удержание RTC transport даже при временном отсутствии peer-целей (`keepConnectedWithoutTargets=true`), чтобы исключить ложные состояния "Нет RTC-соединения" после churn/reconnect.
 - Локальный RTC статус пользователя теперь отражается при активном подключении независимо от количества peer-целей.
-- Validation: `npm --prefix apps/web run build` PASS, `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:sso-external` PASS.
+- Validation: `npm --prefix apps/web run build` PASS, `SMOKE_WEB_BASE_URL=https://test.datowave.com npm run smoke:desktop:sso-external` PASS.
 
 Progress note (2026-03-14, manual RTC/sleep-wake checkpoint):
 - После rollout `c745f06` на test выполнен практический прогон desktop runtime в реальном использовании:
@@ -360,7 +360,7 @@ Progress note (2026-03-14, deterministic handoff phase 1):
 - Реализован backend протокол попытки handoff: `/v1/auth/desktop-handoff/attempt`, `/v1/auth/desktop-handoff/attempt/:attemptId`, `/v1/auth/desktop-handoff/complete`.
 - В web auth flow убран timer fallback после deep-link: browser ждет статус попытки polling-механизмом и только затем показывает completion/error page.
 - В desktop callback прокидывается `attemptId` в renderer, а после `desktop-handoff/exchange` отправляется completion ack.
-- Validation: `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:sso-external` -> PASS.
+- Validation: `SMOKE_WEB_BASE_URL=https://test.datowave.com npm run smoke:desktop:sso-external` -> PASS.
 
 Progress note (2026-03-14, deterministic handoff smoke phase 2 start):
 - Добавлен smoke `scripts/smoke/smoke-desktop-handoff-deterministic.mjs` и root command `npm run smoke:desktop:handoff-deterministic` (happy path + timeout/expired path на attempt protocol).
@@ -373,7 +373,7 @@ Progress note (2026-03-14, deterministic handoff phase 2 test evidence):
 - Runbook quickstart обновлен секцией deterministic handoff smoke (`docs/runbooks/RUNBOOK_TEST_ROLLOUT_QUICKSTART.md`).
 
 Progress note (2026-03-14, voice checkpoint 15m gate):
-- Выполнен `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:voice-checkpoint:15m`: PASS.
+- Выполнен `SMOKE_WEB_BASE_URL=https://test.datowave.com npm run smoke:desktop:voice-checkpoint:15m`: PASS.
 - Метрики: `elapsedMs=900001`, `probes=90`, `maxProbeGapMs=10012`, voice evidence через meter counters (`meterSessions=1`, `meterStreams=1`).
 - Evidence зафиксирован в `docs/status/TEST_RESULTS.md` (Cycle #31).
 
@@ -439,8 +439,8 @@ Progress note (2026-03-15, desktop observability counters):
 
 Progress note (2026-03-15, observability rollout verification):
 - Выполнен test rollout SHA `030b0ec`; deploy/rebuild прошли.
-- Подтверждена доступность новых summary полей через internal API path (`boltorezka-api-test` localhost).
-- Внешний postdeploy realtime gate нестабилен из-за сетевого `ETIMEDOUT` к `test.boltorezka.gismalink.art:443` (повторяемо в `smoke:realtime`), поэтому цикл зафиксирован как PARTIAL (`docs/status/TEST_RESULTS.md`, Cycle #39).
+- Подтверждена доступность новых summary полей через internal API path (`datowave-api-test` localhost).
+- Внешний postdeploy realtime gate нестабилен из-за сетевого `ETIMEDOUT` к `test.datowave.com:443` (повторяемо в `smoke:realtime`), поэтому цикл зафиксирован как PARTIAL (`docs/status/TEST_RESULTS.md`, Cycle #39).
 
 Progress note (2026-03-15, postdeploy gate recovery):
 - Добавлен retry-hardening для `smoke:sso` и browser boot path в `smoke:web:crash-boundary:browser` для снижения сетевых флейков.
@@ -474,8 +474,8 @@ Progress note (2026-03-15, M3 server-first build policy):
 - GitHub desktop workflow переведен в manual-only fallback режим для экономии CI ресурсов.
 
 Progress note (2026-03-15, M3 server-first distribution validation):
-- Выполнен end-to-end прогон на mac-mini (`~/srv/boltorezka` + `~/srv/edge`) для test канала; manifest и build snapshot публикуются в edge static.
-- Исправлен publish-path под реальный Caddy web-root (`/ingress/static/boltorezka/<channel>/desktop/<channel>/...`), публичный `/desktop/test/latest.json` подтвержден.
+- Выполнен end-to-end прогон на mac-mini (`~/srv/datowave` + `~/srv/edge`) для test канала; manifest и build snapshot публикуются в edge static.
+- Исправлен publish-path под реальный Caddy web-root (`/ingress/static/datowave/<channel>/desktop/<channel>/...`), публичный `/desktop/test/latest.json` подтвержден.
 - Добавлена генерация mac updater feed (`/desktop/<channel>/mac/latest-mac.yml` + zip/blockmap), совместимая с `electron-updater` generic provider.
 - Добавлен automation smoke `npm run smoke:desktop:update-feed`, проверяющий `latest.json`, `latest-mac.yml` и zip endpoint.
 
@@ -533,7 +533,7 @@ Progress note (2026-03-17, platform backlog split):
 
 Progress note (2026-03-17, room/chat behavior refactor rollout):
 - Реализовано разделение `joined room` и `active chat room`: чат открывается независимо от voice/video join, text-only комнаты работают как chat-only, для `text+voice`/`text+voice+video` добавлена hover-кнопка `Открыть чат` с active-state подсветкой.
-- Изменения выкачены в `test` из `origin/feature/desktop-unsigned-mode`, SHA `4e2546d`; `deploy:test:smoke` на сервере (`~/srv/boltorezka`) прошел green.
+- Изменения выкачены в `test` из `origin/feature/desktop-unsigned-mode`, SHA `4e2546d`; `deploy:test:smoke` на сервере (`~/srv/datowave`) прошел green.
 
 Progress note (2026-03-17, 2h stability interim evidence):
 - Пассивный 2h мониторинг (`.deploy/manual-desktop-2h-monitor-20260317T071254Z.log`) прервался из-за внешнего фактора (отключение питания) на `113/120` сэмплах, без явного `FAILED`.
@@ -547,12 +547,12 @@ Progress note (2026-03-17, runtime transport centralization phase 1 complete):
 
 Progress note (2026-03-17, runtime transport targeted smoke evidence):
 - Выполнен test rollout `origin/feature/desktop-unsigned-mode` на SHA `6ed844e` через `deploy:test:smoke`; deploy-фаза завершена успешно, общий цикл помечен `failed` из-за независимого feed-gate `smoke:desktop:update-feed`.
-- Для закрытия runtime-refactor gate отдельно выполнен targeted набор на сервере (`~/srv/boltorezka`): `smoke:realtime`, `smoke:livekit:token-flow`, `smoke:desktop:runtime` — все команды завершились `ok`.
+- Для закрытия runtime-refactor gate отдельно выполнен targeted набор на сервере (`~/srv/datowave`): `smoke:realtime`, `smoke:livekit:token-flow`, `smoke:desktop:runtime` — все команды завершились `ok`.
 - `smoke:realtime` прошел с transient retry (`attempt 1/3`, `2/3`) и итогом `ok=true`; `smoke:desktop:runtime` подтвердил desktop markers (`runtime=desktop`, `platform=darwin`, `electronVersion=35.7.5`).
 
 Progress note (2026-03-17, test rollout with server-side desktop build):
 - Выполнен `deploy:test:smoke` для `origin/feature/desktop-unsigned-mode` (SHA `4ca3ddd`) c `ENABLE_DESKTOP_BUILD=1`, `DESKTOP_CHANNEL=test`, `DESKTOP_SIGNING_MODE=unsigned`.
-- Server-first desktop build/publish завершен успешно: обновлены `latest.json` и `mac/latest-mac.yml` для test канала, опубликован артефакт `Boltorezka-mac-arm64.zip`.
+- Server-first desktop build/publish завершен успешно: обновлены `latest.json` и `mac/latest-mac.yml` для test канала, опубликован артефакт `Datowave-mac-arm64.zip`.
 - Postdeploy smoke прошел green, включая `smoke:desktop:update-feed` (`ok`, `channel=test`, `sha=4ca3ddd`) и `smoke:realtime` (`ok=true`, `reconnectOk=true`).
 
 Progress note (2026-03-17, desktop download contract activation):

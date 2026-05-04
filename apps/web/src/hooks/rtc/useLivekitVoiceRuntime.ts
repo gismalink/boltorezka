@@ -111,7 +111,7 @@ function configureLivekitLogLevel() {
   let debugEnabled = false;
   if (typeof window !== "undefined") {
     try {
-      debugEnabled = window.localStorage.getItem("boltorezka_voice_debug") === "1";
+      debugEnabled = window.localStorage.getItem("datowave_voice_debug") === "1";
     } catch {
       debugEnabled = false;
     }

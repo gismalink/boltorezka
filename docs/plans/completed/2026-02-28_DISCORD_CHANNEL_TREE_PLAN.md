@@ -1,4 +1,4 @@
-# Discord-like Channel Tree Plan (Boltorezka) — актуальная версия
+# Discord-like Channel Tree Plan (Datowave) — актуальная версия
 
 Status: Completed (MVP scope, 2026-03-21)
 

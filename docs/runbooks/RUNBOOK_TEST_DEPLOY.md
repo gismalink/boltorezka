@@ -30,19 +30,19 @@
 
 One-command для Datowave (deploy + post-deploy smoke):
 
-- `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/<feature-branch> npm run deploy:test:smoke'`
-- `ssh mac-mini 'cd ~/srv/boltorezka && AUTO_ROLLBACK_ON_FAIL=1 AUTO_ROLLBACK_SMOKE=1 TEST_REF=origin/<branch> npm run deploy:test:smoke'`
+- `ssh mac-mini 'cd ~/srv/datowave && TEST_REF=origin/<feature-branch> npm run deploy:test:smoke'`
+- `ssh mac-mini 'cd ~/srv/datowave && AUTO_ROLLBACK_ON_FAIL=1 AUTO_ROLLBACK_SMOKE=1 TEST_REF=origin/<branch> npm run deploy:test:smoke'`
 
-Режим деплоя по умолчанию в скриптах Datowave: `api-only + caddy-static-sync` (`docker compose up --no-deps --force-recreate <api-service>` + синхронизация `dist` в `edge/ingress/static/boltorezka/<env>`), чтобы не перезапускать shared зависимости (включая TURN) на каждом релизе.
+Режим деплоя по умолчанию в скриптах Datowave: `api-only + caddy-static-sync` (`docker compose up --no-deps --force-recreate <api-service>` + синхронизация `dist` в `edge/ingress/static/datowave/<env>`), чтобы не перезапускать shared зависимости (включая TURN) на каждом релизе.
 
 Полный recreate зависимостей включать только при необходимости и явно:
 
-- `ssh mac-mini 'cd ~/srv/boltorezka && FULL_RECREATE=1 TEST_REF=origin/<feature-branch> npm run deploy:test:smoke'`
-- `ssh mac-mini 'cd ~/srv/boltorezka && FULL_RECREATE=1 PROD_REF=origin/main npm run deploy:prod'`
+- `ssh mac-mini 'cd ~/srv/datowave && FULL_RECREATE=1 TEST_REF=origin/<feature-branch> npm run deploy:test:smoke'`
+- `ssh mac-mini 'cd ~/srv/datowave && FULL_RECREATE=1 PROD_REF=origin/main npm run deploy:prod'`
 
 Для исключения при деплое из `main` (только по явному решению):
 
-- `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test:smoke'`
+- `ssh mac-mini 'cd ~/srv/datowave && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test:smoke'`
 
 > Используй фактические параметры скрипта из канонических server docs.
 

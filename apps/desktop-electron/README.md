@@ -1,6 +1,6 @@
-# Boltorezka Desktop (Electron)
+# Datowave Desktop (Electron)
 
-Desktop оболочка для существующего web-клиента Boltorezka.
+Desktop оболочка для существующего web-клиента Datowave.
 
 ## Команды
 

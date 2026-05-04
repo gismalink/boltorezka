@@ -49,7 +49,7 @@ export class RealtimeClient {
   private pendingRequests = new Map<string, PendingRequest>();
   private ackTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
-  private static readonly PERSISTED_PENDING_KEY = "boltorezka:ws:pending:chat-send:v1";
+  private static readonly PERSISTED_PENDING_KEY = "datowave:ws:pending:chat-send:v1";
   private static readonly PERSISTED_PENDING_LIMIT = 100;
   private static readonly PERSISTED_PENDING_TTL_MS = 24 * 60 * 60 * 1000;
 

@@ -51,13 +51,13 @@ Update (2026-04-06):
 	- auto-reload клиента при новой версии,
 	- smoke `smoke:web:version-cache` в postdeploy gate.
 - Закрыт dual-path readiness в `test`:
-	- добавлен отдельный static delivery path `https://test.boltorezka.gismalink.art/__web/`,
+	- добавлен отдельный static delivery path `https://test.datowave.com/__web/`,
 	- split-smoke (`SMOKE_API_URL` + `SMOKE_WEB_BASE_URL`) — PASS.
 - Активирован внешний static delivery path в test ingress (web-default + API path routing):
 	- `edge/ingress/caddy/Caddyfile` переключён на split routing (`/v1*|/health|/version|/metrics` -> API, остальные пути -> web static),
 	- postdeploy smoke PASS на decoupled схеме (`apiServeStatic=0`).
 - Выполнена стабилизация на Caddy-only static serving (без внутреннего nginx слоя):
-	- static bundle синхронизируется в `edge/ingress/static/boltorezka/test` при test deploy,
+	- static bundle синхронизируется в `edge/ingress/static/datowave/test` при test deploy,
 	- test rollout/smoke PASS на SHA `7f319e9`.
 - Закрыт runtime UX пункт по устройствам ввода:
 	- при system `devicechange` в active call выполняется auto-refresh outgoing mic track (включая `default` route).

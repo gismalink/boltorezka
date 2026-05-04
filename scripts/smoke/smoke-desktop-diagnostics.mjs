@@ -13,7 +13,7 @@ const electronBinary = requireFromDesktop("electron");
 
 const baseUrl = String(process.env.SMOKE_WEB_BASE_URL || process.env.SMOKE_API_URL || "https://test.datowave.com").replace(/\/$/, "");
 const timeoutMs = Number(process.env.SMOKE_DESKTOP_DIAGNOSTICS_TIMEOUT_MS || 30000);
-const outPath = String(process.env.SMOKE_DESKTOP_DIAGNOSTICS_OUT || "").trim() || path.join(os.tmpdir(), `boltorezka-desktop-diagnostics-${Date.now()}.json`);
+const outPath = String(process.env.SMOKE_DESKTOP_DIAGNOSTICS_OUT || "").trim() || path.join(os.tmpdir(), `datowave-desktop-diagnostics-${Date.now()}.json`);
 
 async function main() {
   fs.mkdirSync(path.dirname(outPath), { recursive: true });

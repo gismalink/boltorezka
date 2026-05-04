@@ -1,5 +1,5 @@
 /**
- * Точка входа web-приложения Datute (Boltorezka).
+ * Точка входа web-приложения Datute (Datowave).
  *
  * Что делает:
  * - Определяет окружение (web/desktop, prod/test) и проставляет data-атрибуты на <html>.
@@ -44,10 +44,10 @@ const normalizedPathname = currentPathname.endsWith("/") && currentPathname.leng
 const isLegalRoute = legalRoutes.has(normalizedPathname);
 if (isDesktop) {
   const smokeWindow = window as Window & {
-    __boltorezkaDesktopSmokeTrack?: () => void;
+    __datowaveDesktopSmokeTrack?: () => void;
   };
 
-  smokeWindow.__boltorezkaDesktopSmokeTrack = () => {
+  smokeWindow.__datowaveDesktopSmokeTrack = () => {
     trackClientEvent("desktop_smoke_probe", {
       probe: true,
       source: "desktop_smoke"
@@ -55,7 +55,7 @@ if (isDesktop) {
   };
 
   if (searchParams.get("desktop_smoke_telemetry") === "1") {
-    smokeWindow.__boltorezkaDesktopSmokeTrack();
+    smokeWindow.__datowaveDesktopSmokeTrack();
   }
 }
 

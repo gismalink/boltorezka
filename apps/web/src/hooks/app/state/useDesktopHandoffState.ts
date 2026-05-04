@@ -3,7 +3,7 @@ import { asTrimmedString } from "../../../utils/stringUtils";
 
 export function useDesktopHandoffState(token: string) {
   const showDesktopBrowserCompletion = useMemo(() => {
-    if (typeof window === "undefined" || window.boltorezkaDesktop) {
+    if (typeof window === "undefined" || window.datowaveDesktop) {
       return false;
     }
 
@@ -12,7 +12,7 @@ export function useDesktopHandoffState(token: string) {
   }, [token]);
 
   const desktopHandoffError = useMemo(() => {
-    if (typeof window === "undefined" || window.boltorezkaDesktop) {
+    if (typeof window === "undefined" || window.datowaveDesktop) {
       return "";
     }
 

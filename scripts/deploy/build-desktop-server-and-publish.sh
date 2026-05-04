@@ -4,7 +4,7 @@ set -euo pipefail
 
 if [[ $# -lt 1 ]]; then
   echo "Usage: $0 <git-ref> [repo-dir]" >&2
-  echo "Example: $0 origin/feature/electron-desktop-foundation ~/srv/boltorezka" >&2
+  echo "Example: $0 origin/feature/electron-desktop-foundation ~/srv/datowave" >&2
   exit 1
 fi
 
@@ -13,8 +13,8 @@ REPO_DIR="${2:-$PWD}"
 DESKTOP_CHANNEL="${DESKTOP_CHANNEL:-test}"
 DESKTOP_SIGNING_MODE="${DESKTOP_SIGNING_MODE:-auto}"
 EDGE_REPO_DIR="${EDGE_REPO_DIR:-$HOME/srv/edge}"
-EDGE_DESKTOP_DIR_BASE="${EDGE_DESKTOP_DIR_BASE:-$EDGE_REPO_DIR/ingress/static/boltorezka}"
-# Caddy serves test/prod from /srv/static/boltorezka/<env>, so desktop artifacts must live under that root.
+EDGE_DESKTOP_DIR_BASE="${EDGE_DESKTOP_DIR_BASE:-$EDGE_REPO_DIR/ingress/static/datowave}"
+# Caddy serves test/prod from /srv/static/datowave/<env>, so desktop artifacts must live under that root.
 PUBLISH_DIR="$EDGE_DESKTOP_DIR_BASE/$DESKTOP_CHANNEL/desktop/$DESKTOP_CHANNEL"
 PUBLIC_BASE_URL="${DESKTOP_PUBLIC_BASE_URL:-}"
 
@@ -149,9 +149,9 @@ if [[ -z "$APP_UPDATE_FEED_BASE" ]]; then
 fi
 APP_UPDATE_FEED_BASE="${APP_UPDATE_FEED_BASE%/}/desktop/$DESKTOP_CHANNEL/mac"
 
-APP_UPDATE_FILE_PATH="$(find "$TARGET_DIR" -type f -path '*/Boltorezka.app/Contents/Resources/app-update.yml' | head -n 1)"
+APP_UPDATE_FILE_PATH="$(find "$TARGET_DIR" -type f -path '*/Datowave.app/Contents/Resources/app-update.yml' | head -n 1)"
 if [[ -z "$APP_UPDATE_FILE_PATH" ]]; then
-  APP_UPDATE_DIR="$(find "$TARGET_DIR" -type d -path '*/Boltorezka.app/Contents/Resources' | head -n 1)"
+  APP_UPDATE_DIR="$(find "$TARGET_DIR" -type d -path '*/Datowave.app/Contents/Resources' | head -n 1)"
   if [[ -n "$APP_UPDATE_DIR" ]]; then
     APP_UPDATE_FILE_PATH="$APP_UPDATE_DIR/app-update.yml"
   fi

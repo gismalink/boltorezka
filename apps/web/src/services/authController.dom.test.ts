@@ -80,7 +80,7 @@ afterEach(() => {
     writable: true,
     value: originalLocation
   });
-  delete (window as unknown as { boltorezkaDesktop?: unknown }).boltorezkaDesktop;
+  delete (window as unknown as { datowaveDesktop?: unknown }).datowaveDesktop;
   vi.useRealTimers();
 });
 
@@ -193,7 +193,7 @@ describe("AuthController.startDesktopBrowserHandoff", () => {
     }
     await promise;
 
-    expect((window.location as unknown as { href: string }).href).toMatch(/^boltorezka:\/\/app\.example\//);
+    expect((window.location as unknown as { href: string }).href).toMatch(/^datowave:\/\/app\.example\//);
     expect((window.location.replace as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith(
       expect.stringContaining("desktop_handoff_error=timeout")
     );
@@ -275,7 +275,7 @@ describe("AuthController.logout", () => {
 
   it("desktop runtime: skips redirect and logs desktop completion", async () => {
     apiMock.authLogout.mockResolvedValueOnce(undefined);
-    (window as unknown as { boltorezkaDesktop: unknown }).boltorezkaDesktop = {};
+    (window as unknown as { datowaveDesktop: unknown }).datowaveDesktop = {};
 
     const opts = makeOptions();
     await new AuthController(opts).logout("tok-1");

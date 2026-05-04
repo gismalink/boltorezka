@@ -156,8 +156,8 @@ async function main() {
     await installAuthHeaderRoute(page);
 
     await page.addInitScript((token) => {
-      localStorage.setItem("boltorezka_lang", "en");
-      localStorage.setItem("boltorezka_token", token);
+      localStorage.setItem("datowave_lang", "en");
+      localStorage.setItem("datowave_token", token);
     }, bearerToken);
 
     // Cookie-first mode may ignore localStorage token persistence. Try to

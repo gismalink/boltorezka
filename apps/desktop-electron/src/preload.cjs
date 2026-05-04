@@ -23,7 +23,7 @@ ipcRenderer.on("desktop:notification-open", (_event, payload) => {
   });
 });
 
-contextBridge.exposeInMainWorld("boltorezkaDesktop", {
+contextBridge.exposeInMainWorld("datowaveDesktop", {
   platform: process.platform,
   version: process.versions.electron,
   update: {

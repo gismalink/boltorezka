@@ -6,7 +6,7 @@
 
 - Base path: `/v1/*`
 - Auth mode: `sso`
-- Protected endpoints: Bearer JWT; при `AUTH_COOKIE_MODE=1` разрешён cookie-backed auth через `boltorezka_session*`.
+- Protected endpoints: Bearer JWT; при `AUTH_COOKIE_MODE=1` разрешён cookie-backed auth через `datowave_session*`.
 
 ## CORS / Credentialed requests
 

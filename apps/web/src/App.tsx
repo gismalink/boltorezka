@@ -97,9 +97,9 @@ const CLIENT_BUILD_DATE = asTrimmedString(import.meta.env.VITE_APP_BUILD_DATE);
 const CLIENT_BUILD_DATE_LABEL = formatBuildDateLabel(CLIENT_BUILD_VERSION, CLIENT_BUILD_DATE);
 const CHAT_TYPING_TTL_MS = 4500;
 const CHAT_TYPING_PING_INTERVAL_MS = 1800;
-const COOKIE_CONSENT_KEY = "boltorezka_cookie_consent_v1";
-const CURRENT_SERVER_ID_STORAGE_KEY = "boltorezka_current_server_id";
-const ROOM_SLUG_STORAGE_KEY = "boltorezka_room_slug";
+const COOKIE_CONSENT_KEY = "datowave_cookie_consent_v1";
+const CURRENT_SERVER_ID_STORAGE_KEY = "datowave_current_server_id";
+const ROOM_SLUG_STORAGE_KEY = "datowave_room_slug";
 
 export function App() {
   const [dmModeActive, setDmModeActive] = useState(false);

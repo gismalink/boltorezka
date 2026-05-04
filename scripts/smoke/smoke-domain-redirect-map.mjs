@@ -1,7 +1,7 @@
 // Purpose: Validate legacy->datowave redirect map and ensure path/query are preserved.
 const testDefaultCases = [
   {
-    from: "https://test.boltorezka.gismalink.art/health?smoke=1",
+    from: "https://test.datowave.com/health?smoke=1",
     toHost: "test.datowave.com"
   },
   {
@@ -12,7 +12,7 @@ const testDefaultCases = [
 
 const prodDefaultCases = [
   {
-    from: "https://boltorezka.gismalink.art/health?smoke=1",
+    from: "https://datowave.com/health?smoke=1",
     toHost: "datowave.com"
   }
 ];

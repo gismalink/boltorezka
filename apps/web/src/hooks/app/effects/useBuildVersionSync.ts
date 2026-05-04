@@ -65,7 +65,7 @@ export function useBuildVersionSync(clientBuildSha: string) {
     // a server deployed from a different web build. For packaged desktop
     // (file:// renderer) web auto-reload would keep reloading the same bundle.
     // For remote desktop renderer (http/https), regular web version sync is safe.
-    const isDesktopRuntime = typeof window !== "undefined" && Boolean(window.boltorezkaDesktop);
+    const isDesktopRuntime = typeof window !== "undefined" && Boolean(window.datowaveDesktop);
     const isLocalDesktopRenderer = isDesktopRuntime && window.location.protocol === "file:";
     if (isLocalDesktopRenderer) {
       clearPendingReloadFlag();

@@ -61,7 +61,7 @@ export function useAuthProfileFlow({
       return;
     }
 
-    if (typeof window !== "undefined" && window.boltorezkaDesktop) {
+    if (typeof window !== "undefined" && window.datowaveDesktop) {
       // Desktop must not silently restore SSO from ambient browser cookies.
       // Session should be established only via explicit desktop handoff/login.
       return;
@@ -72,7 +72,7 @@ export function useAuthProfileFlow({
   }, [token, authMode, authController, autoSsoAttemptedRef]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || window.boltorezkaDesktop || authMode !== "sso") {
+    if (typeof window === "undefined" || window.datowaveDesktop || authMode !== "sso") {
       return;
     }
 
@@ -144,7 +144,7 @@ export function useAuthProfileFlow({
       return;
     }
 
-    if (window.boltorezkaDesktop) {
+    if (window.datowaveDesktop) {
       return;
     }
 

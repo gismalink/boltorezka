@@ -31,7 +31,7 @@ jobs:
 
       - name: Run test smoke
         env:
-          SMOKE_API_URL: ${{ vars.TEST_SMOKE_API_URL || 'https://test.boltorezka.gismalink.art' }}
+          SMOKE_API_URL: ${{ vars.TEST_SMOKE_API_URL || 'https://test.datowave.com' }}
           SMOKE_TEST_BEARER_TOKEN: ${{ secrets.TEST_SMOKE_TEST_BEARER_TOKEN }}
           SMOKE_TEST_BEARER_TOKEN_SECOND: ${{ secrets.TEST_SMOKE_TEST_BEARER_TOKEN_SECOND }}
           SMOKE_TEST_BEARER_TOKEN_THIRD: ${{ secrets.TEST_SMOKE_TEST_BEARER_TOKEN_THIRD }}

@@ -217,7 +217,7 @@ export function DmProvider({ token, onDmOpen, onDmClose, children }: { token: st
         setDmText("");
         setPendingDmImageDataUrl(null);
         if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent("boltorezka:chat:own-send"));
+          window.dispatchEvent(new CustomEvent("datowave:chat:own-send"));
         }
       } catch {
         // upload failed — silently ignore for now
@@ -233,7 +233,7 @@ export function DmProvider({ token, onDmOpen, onDmClose, children }: { token: st
     setDmText("");
     // B3: сигнал ChatPanel для принудительного скролла к низу.
     if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("boltorezka:chat:own-send"));
+      window.dispatchEvent(new CustomEvent("datowave:chat:own-send"));
     }
   }, [activeThreadId, token]);
 
@@ -356,8 +356,8 @@ export function DmProvider({ token, onDmOpen, onDmClose, children }: { token: st
       handleDmRealtimeEventRef.current(type, payload);
     };
 
-    window.addEventListener("boltorezka:dm", handler);
-    return () => window.removeEventListener("boltorezka:dm", handler);
+    window.addEventListener("datowave:dm", handler);
+    return () => window.removeEventListener("datowave:dm", handler);
   }, []);
 
   const value: DmContextValue = {

@@ -3,7 +3,7 @@ import { chromium } from "playwright";
 
 const webBaseUrl = (process.env.SMOKE_WEB_BASE_URL ?? process.env.SMOKE_API_URL ?? "https://test.datowave.com").replace(/\/+$/, "");
 const legalPath = process.env.SMOKE_COOKIE_CONSENT_PATH ?? "/privacy";
-const consentKey = process.env.SMOKE_COOKIE_CONSENT_KEY ?? "boltorezka_cookie_consent_v1";
+const consentKey = process.env.SMOKE_COOKIE_CONSENT_KEY ?? "datowave_cookie_consent_v1";
 
 const knownNonEssentialCookieNames = [
   /^_ga/i,

@@ -17,7 +17,7 @@ type ServerSoundSettings = {
   enabledByEvent: Record<ServerSoundEvent, boolean>;
 };
 
-const SETTINGS_KEY = "boltorezka_server_sounds";
+const SETTINGS_KEY = "datowave_server_sounds";
 
 const DEFAULT_SETTINGS: ServerSoundSettings = {
   masterVolume: 65,

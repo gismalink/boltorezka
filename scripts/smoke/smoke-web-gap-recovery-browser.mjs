@@ -11,7 +11,7 @@ const bootRetryDelayMs = Number(process.env.SMOKE_WEB_BOOT_RETRY_DELAY_MS || 100
 const bearerToken = String(process.env.SMOKE_TEST_BEARER_TOKEN || "").trim();
 const bearerTokenSecond = String(process.env.SMOKE_TEST_BEARER_TOKEN_SECOND || "").trim();
 const smokeUserEmail = String(process.env.SMOKE_USER_EMAIL || "smoke-rtc-1@example.test").trim().toLowerCase();
-const sessionCookieName = String(process.env.SMOKE_SESSION_COOKIE_NAME || "boltorezka_session_test").trim() || "boltorezka_session_test";
+const sessionCookieName = String(process.env.SMOKE_SESSION_COOKIE_NAME || "datowave_session_test").trim() || "datowave_session_test";
 const preseedSessionCookieValue = String(process.env.SMOKE_WEB_SESSION_COOKIE_VALUE || "").trim();
 const warmupMs = Number(process.env.SMOKE_WEB_GAP_WARMUP_MS || 4000);
 const settleMs = Number(process.env.SMOKE_WEB_GAP_SETTLE_MS || 500);
@@ -551,7 +551,7 @@ async function main() {
 
     const tokenPayload = decodeJwtPayload(viewerToken);
     const bootstrapUserId = String(tokenPayload?.sub || "").trim();
-    const introSeenKey = bootstrapUserId ? `boltorezka_intro_v1_seen:${bootstrapUserId}` : "";
+    const introSeenKey = bootstrapUserId ? `datowave_intro_v1_seen:${bootstrapUserId}` : "";
 
     const viewerSessionCookieValue = sessionCookieValueBootstrap
       || (viewerToken === bearerToken ? sessionCookieValuePrimary : viewerToken === bearerTokenSecond ? sessionCookieValueSecondary : "");
@@ -582,8 +582,8 @@ async function main() {
     }
 
     await page.addInitScript((token, firstRunSeenKey) => {
-      localStorage.setItem("boltorezka_lang", "en");
-      localStorage.setItem("boltorezka_token", token);
+      localStorage.setItem("datowave_lang", "en");
+      localStorage.setItem("datowave_token", token);
       if (firstRunSeenKey) {
         localStorage.setItem(firstRunSeenKey, "1");
       }

@@ -49,7 +49,7 @@
 - Branch: `origin/main`
 - Verified deploy SHA in test: `10b6fd5`
 - Command:
-  - `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 SMOKE_DESKTOP_UPDATE_FEED=1 SMOKE_DESKTOP_CHANNEL=test npm run deploy:test:smoke'`
+  - `ssh mac-mini 'cd ~/srv/datowave && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 SMOKE_DESKTOP_UPDATE_FEED=1 SMOKE_DESKTOP_CHANNEL=test npm run deploy:test:smoke'`
 - Result:
   - `health` — PASS
   - `smoke:sso` — PASS
@@ -64,8 +64,8 @@
 - Current validated mode in test: **Caddy-only static serving**.
 - Runtime model:
   - API container serves only API/WS/auth (`API_SERVE_STATIC=0`),
-  - web static bundle synced to edge path `~/srv/edge/ingress/static/boltorezka/test`,
-  - edge Caddy serves web static directly and routes API paths to `boltorezka-api-test`.
+  - web static bundle synced to edge path `~/srv/edge/ingress/static/datowave/test`,
+  - edge Caddy serves web static directly and routes API paths to `datowave-api-test`.
 
 ### 3.1.2 Additional readiness evidence (2026-03-04)
 
@@ -83,7 +83,7 @@
 - Target: `origin/main`
 - Deploy SHA in prod: `36dd4e129b92e7bb0300ff936a8359f6f9be3658`
 - Commands:
-  - `ssh mac-mini 'cd ~/srv/boltorezka && PROD_REF=origin/main npm run deploy:prod'`
+  - `ssh mac-mini 'cd ~/srv/datowave && PROD_REF=origin/main npm run deploy:prod'`
   - post-checks: `curl -I https://datowave.com/health`, `curl https://datowave.com/v1/auth/mode`
 - Result:
   - health: `200`

@@ -177,8 +177,8 @@ async function main() {
 
   try {
     await page.addInitScript((presetToken) => {
-      localStorage.setItem("boltorezka_lang", "en");
-      localStorage.setItem("boltorezka_token", presetToken);
+      localStorage.setItem("datowave_lang", "en");
+      localStorage.setItem("datowave_token", presetToken);
     }, bearerToken);
 
     await gotoWithBootRetries(page);

@@ -144,7 +144,7 @@ try {
     host: "0.0.0.0",
     port: config.port
   });
-  app.log.info(`Boltorezka API listening on port ${config.port}`);
+  app.log.info(`Datowave API listening on port ${config.port}`);
 } catch (error: unknown) {
   app.log.error(error);
   process.exit(1);

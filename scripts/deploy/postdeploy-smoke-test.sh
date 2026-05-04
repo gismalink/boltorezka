@@ -20,13 +20,13 @@ if [[ "$SMOKE_ENV_SCOPE" == "auto" ]]; then
 fi
 
 if [[ "$SMOKE_ENV_SCOPE" == "prod" ]]; then
-  POSTGRES_SERVICE="${SMOKE_POSTGRES_SERVICE:-${PROD_POSTGRES_SERVICE:-boltorezka-db-prod}}"
-  REDIS_SERVICE="${SMOKE_REDIS_SERVICE:-${PROD_REDIS_SERVICE:-boltorezka-redis-prod}}"
-  API_SERVICE="${SMOKE_API_SERVICE:-${PROD_API_SERVICE:-boltorezka-api-prod}}"
+  POSTGRES_SERVICE="${SMOKE_POSTGRES_SERVICE:-${PROD_POSTGRES_SERVICE:-datowave-db-prod}}"
+  REDIS_SERVICE="${SMOKE_REDIS_SERVICE:-${PROD_REDIS_SERVICE:-datowave-redis-prod}}"
+  API_SERVICE="${SMOKE_API_SERVICE:-${PROD_API_SERVICE:-datowave-api-prod}}"
 else
-  POSTGRES_SERVICE="${SMOKE_POSTGRES_SERVICE:-${TEST_POSTGRES_SERVICE:-boltorezka-db-test}}"
-  REDIS_SERVICE="${SMOKE_REDIS_SERVICE:-${TEST_REDIS_SERVICE:-boltorezka-redis-test}}"
-  API_SERVICE="${SMOKE_API_SERVICE:-${TEST_API_SERVICE:-boltorezka-api-test}}"
+  POSTGRES_SERVICE="${SMOKE_POSTGRES_SERVICE:-${TEST_POSTGRES_SERVICE:-datowave-db-test}}"
+  REDIS_SERVICE="${SMOKE_REDIS_SERVICE:-${TEST_REDIS_SERVICE:-datowave-redis-test}}"
+  API_SERVICE="${SMOKE_API_SERVICE:-${TEST_API_SERVICE:-datowave-api-test}}"
 fi
 USER_EMAIL="${SMOKE_USER_EMAIL:-smoke-rtc-1@example.test}"
 USER_EMAIL_SECOND="${SMOKE_USER_EMAIL_SECOND:-smoke-rtc-2@example.test}"
@@ -618,7 +618,7 @@ validate_turn_rotation_freshness() {
 validate_turn_rotation_freshness
 
 collect_turn_allocation_failures() {
-  local turn_service="${SMOKE_TURN_SERVICE:-boltorezka-turn}"
+  local turn_service="${SMOKE_TURN_SERVICE:-datowave-turn}"
   local log_window="${SMOKE_TURN_LOG_WINDOW:-30m}"
   local strict_threshold_raw="${SMOKE_TURN_ALLOCATION_FAIL_THRESHOLD:--1}"
   local strict_threshold=-1
@@ -859,7 +859,7 @@ mint_fresh_smoke_bearer_for_email() {
 }
 
 if [[ "$EFFECTIVE_COOKIE_MODE" == "1" ]]; then
-  COOKIE_NAME="${TEST_AUTH_SESSION_COOKIE_NAME:-${AUTH_SESSION_COOKIE_NAME:-boltorezka_session_test}}"
+  COOKIE_NAME="${TEST_AUTH_SESSION_COOKIE_NAME:-${AUTH_SESSION_COOKIE_NAME:-datowave_session_test}}"
   if [[ "${SMOKE_COOKIE_NEGATIVE:-1}" == "0" ]]; then
     echo "[postdeploy-smoke] smoke:auth:cookie-negative skipped (SMOKE_COOKIE_NEGATIVE=0)"
     COOKIE_NEGATIVE_STATUS="skip"

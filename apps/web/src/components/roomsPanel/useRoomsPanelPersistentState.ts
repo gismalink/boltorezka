@@ -1,12 +1,12 @@
 /**
  * useRoomsPanelPersistentState.ts — хук персистентного состояния RoomsPanel.
- * Сохраняет развёрнутые/свёрнутые группы и размеры в localStorage по ключу boltorezka_rooms_panel_*.
+ * Сохраняет развёрнутые/свёрнутые группы и размеры в localStorage по ключу datowave_rooms_panel_*.
  */
 import { useEffect, useState } from "react";
 import { asTrimmedString } from "../../utils/stringUtils";
 
-const ROOMS_PANEL_GROUPS_STORAGE_KEY = "boltorezka_rooms_panel_groups";
-const ROOMS_PANEL_MUTE_PRESETS_STORAGE_KEY = "boltorezka_room_mute_presets";
+const ROOMS_PANEL_GROUPS_STORAGE_KEY = "datowave_rooms_panel_groups";
+const ROOMS_PANEL_MUTE_PRESETS_STORAGE_KEY = "datowave_room_mute_presets";
 
 type RoomMutePreset = "1h" | "8h" | "24h" | "forever" | "off";
 

@@ -1,1 +1,1 @@
-export const REALTIME_SERVER_READY_EVENT = "boltorezka:realtime-server-ready";
+export const REALTIME_SERVER_READY_EVENT = "datowave:realtime-server-ready";

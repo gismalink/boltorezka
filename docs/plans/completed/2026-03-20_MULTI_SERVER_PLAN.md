@@ -255,7 +255,7 @@ Stage 1 note (2026-03-27):
    - поля `rooms.server_id` и `rooms.nsfw` + индексы;
    - bootstrap `BossServer` и backfill текущих `rooms`/`server_members`.
 - Миграция применена в `test` через `ALLOW_TEST_FROM_MAIN=1 TEST_REF=origin/main npm run deploy:test:smoke` (SHA `3fd0dd3`, PASS).
-- SQL-проверки в `boltorezka-db-test` подтверждают:
+- SQL-проверки в `datowave-db-test` подтверждают:
    - таблицы: `servers`, `server_members`, `server_invites`, `server_bans`, `service_bans`;
    - колонки `rooms.server_id`, `rooms.nsfw`;
    - bootstrap запись `bossserver | BossServer | is_default=true`.
@@ -314,7 +314,7 @@ Stage 2 note (2026-03-27):
 
 Stage 3 note (2026-03-28):
 - В `apps/web/src/api.ts` добавлен клиентский вызов `GET /v1/servers`.
-- В `apps/web/src/App.tsx` добавлены state `servers/currentServerId` + восстановление выбора сервера из localStorage (`boltorezka_current_server_id`).
+- В `apps/web/src/App.tsx` добавлены state `servers/currentServerId` + восстановление выбора сервера из localStorage (`datowave_current_server_id`).
 - В `apps/web/src/components/AppHeader.tsx` добавлены:
    - заголовок формата `Dato // ServerName`;
    - базовый server switcher (select) в desktop header.

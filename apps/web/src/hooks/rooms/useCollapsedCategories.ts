@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { RoomsTreeResponse } from "../../domain";
 
-const COLLAPSED_CATEGORIES_STORAGE_KEY = "boltorezka_collapsed_category_ids";
+const COLLAPSED_CATEGORIES_STORAGE_KEY = "datowave_collapsed_category_ids";
 
 export function useCollapsedCategories(roomsTree: RoomsTreeResponse | null) {
   const [collapsedCategoryIds, setCollapsedCategoryIds] = useState<string[]>(() => {

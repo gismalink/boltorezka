@@ -18,8 +18,8 @@ export function resolveLivekitClientUrl(request: FastifyRequest): string {
     const requestProto = forwardedProto || (normalizeBoundedString((request as { protocol?: string }).protocol, 16) || "").toLowerCase();
     const isHttps = requestProto === "https";
     const isIpHost = /^\d{1,3}(?:\.\d{1,3}){3}$/.test(parsed.hostname);
-    const isLegacyLivekitHost = parsed.hostname === "test.boltorezka.gismalink.art"
-      || parsed.hostname === "boltorezka.gismalink.art";
+    const isLegacyLivekitHost = parsed.hostname === "test.datowave.com"
+      || parsed.hostname === "datowave.com";
 
     if (normalizedHost && isLegacyLivekitHost) {
       parsed.hostname = normalizedHost;

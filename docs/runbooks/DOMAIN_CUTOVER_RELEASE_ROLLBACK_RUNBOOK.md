@@ -47,9 +47,9 @@ Scope:
 
 1. Подтвердить clean git state и нужный ref.
 2. Запустить deploy в `test`:
-- `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/<feature-branch> npm run deploy:test:smoke'`
+- `ssh mac-mini 'cd ~/srv/datowave && TEST_REF=origin/<feature-branch> npm run deploy:test:smoke'`
 3. Проверить smoke summary:
-- `ssh mac-mini 'cd ~/srv/boltorezka && cat .deploy/last-smoke-summary.env'`
+- `ssh mac-mini 'cd ~/srv/datowave && cat .deploy/last-smoke-summary.env'`
 4. Зафиксировать release notes запись (template из раздела 1).
 5. Для `prod`:
 - только после merge в `main`,
@@ -71,9 +71,9 @@ Rollback обязателен при любом из условий:
 1. Определить previous known-good ref/SHA.
 2. Выполнить rollback deploy в целевой env:
 - test:
-  - `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=<known-good-ref> npm run deploy:test'`
+  - `ssh mac-mini 'cd ~/srv/datowave && TEST_REF=<known-good-ref> npm run deploy:test'`
 - prod:
-  - `ssh mac-mini 'cd ~/srv/boltorezka && PROD_REF=origin/main npm run deploy:prod'`
+  - `ssh mac-mini 'cd ~/srv/datowave && PROD_REF=origin/main npm run deploy:prod'`
   - только при explicit прод-разрешении.
 3. Прогнать smoke после rollback:
 - `SMOKE_API_URL=https://test.datowave.com npm run smoke:test:postdeploy` (для test)

@@ -24,7 +24,7 @@ Required fields:
 
 Optional fields:
 - `JOB_ENABLED` - `1` (default) or `0`
-- `JOB_WORKDIR` - default `~/srv/boltorezka`
+- `JOB_WORKDIR` - default `~/srv/datowave`
 - `JOB_TIMEOUT_SECONDS` - optional timeout
 - `JOB_LOG_RETENTION_DAYS` - per-job log retention (default `14`)
 - `JOB_SCHEDULE_KIND` - scheduling hint (currently `interval` used by launchd adapter)
@@ -48,7 +48,7 @@ Per-run stdout/stderr logs:
 - `~/.deploy/scheduler/logs/<job-id>/<timestamp>.err.log`
 
 Runner guarantees:
-- Lock per job (`/tmp/boltorezka-scheduler-<job-id>.lock`) to avoid overlapping runs.
+- Lock per job (`/tmp/datowave-scheduler-<job-id>.lock`) to avoid overlapping runs.
 - `started` and final (`success`/`failed`/`skipped_locked`) events in NDJSON.
 - Per-job log retention cleanup.
 
@@ -57,21 +57,21 @@ Runner guarantees:
 List registered jobs:
 
 ```bash
-cd ~/srv/boltorezka
+cd ~/srv/datowave
 bash ./scripts/ops/scheduler/list-jobs.sh
 ```
 
 Run one job immediately:
 
 ```bash
-cd ~/srv/boltorezka
+cd ~/srv/datowave
 bash ./scripts/ops/scheduler/run-job.sh backup-postgres-all
 ```
 
 Inspect latest executions:
 
 ```bash
-tail -n 30 ~/srv/boltorezka/.deploy/scheduler/executions.ndjson
+tail -n 30 ~/srv/datowave/.deploy/scheduler/executions.ndjson
 ```
 
 ## 5) Install on macOS launchd
@@ -79,7 +79,7 @@ tail -n 30 ~/srv/boltorezka/.deploy/scheduler/executions.ndjson
 Per job install/update:
 
 ```bash
-cd ~/srv/boltorezka
+cd ~/srv/datowave
 bash ./scripts/ops/scheduler/install-launchd-job.sh backup-postgres-all
 bash ./scripts/ops/scheduler/install-launchd-job.sh chat-orphan-cleanup
 bash ./scripts/ops/scheduler/install-launchd-job.sh cleanup-server-logs
@@ -90,11 +90,11 @@ bash ./scripts/ops/scheduler/install-launchd-job.sh turn-credentials-rotate
 Verification:
 
 ```bash
-launchctl print "gui/$(id -u)/com.boltorezka.scheduler.backup-postgres-all" | sed -n '1,80p'
-launchctl print "gui/$(id -u)/com.boltorezka.scheduler.chat-orphan-cleanup" | sed -n '1,80p'
-launchctl print "gui/$(id -u)/com.boltorezka.scheduler.cleanup-server-logs" | sed -n '1,80p'
-launchctl print "gui/$(id -u)/com.boltorezka.scheduler.slo-rolling-gate" | sed -n '1,80p'
-launchctl print "gui/$(id -u)/com.boltorezka.scheduler.turn-credentials-rotate" | sed -n '1,80p'
+launchctl print "gui/$(id -u)/com.datowave.scheduler.backup-postgres-all" | sed -n '1,80p'
+launchctl print "gui/$(id -u)/com.datowave.scheduler.chat-orphan-cleanup" | sed -n '1,80p'
+launchctl print "gui/$(id -u)/com.datowave.scheduler.cleanup-server-logs" | sed -n '1,80p'
+launchctl print "gui/$(id -u)/com.datowave.scheduler.slo-rolling-gate" | sed -n '1,80p'
+launchctl print "gui/$(id -u)/com.datowave.scheduler.turn-credentials-rotate" | sed -n '1,80p'
 ```
 
 ## 6) Portability guidance for new servers

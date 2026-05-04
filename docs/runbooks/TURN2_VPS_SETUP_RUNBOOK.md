@@ -26,7 +26,7 @@
 Интерактивно добавляем ключ на VPS:
 
 ```bash
-cd ~/srv/boltorezka
+cd ~/srv/datowave
 bash ./scripts/ops/bootstrap-vps-ssh-key.sh 46.149.71.86 root
 ```
 
@@ -37,7 +37,7 @@ bash ./scripts/ops/bootstrap-vps-ssh-key.sh 46.149.71.86 root
 Используем только native provisioning скрипт:
 
 ```bash
-cd ~/srv/boltorezka
+cd ~/srv/datowave
 TURN2_SSH_TARGET=root@46.149.71.86 \
 TURN2_DOMAIN=turn2.datowave.com \
 TURN2_EXTERNAL_IP=46.149.71.86 \
@@ -72,7 +72,7 @@ Renewal note: повторный ручной provisioning для renew обыч
 Если DNS еще не распространился, можно сделать pre-DNS прогон:
 
 ```bash
-cd ~/srv/boltorezka
+cd ~/srv/datowave
 TURN2_SSH_TARGET=root@46.149.71.86 \
 TURN2_DOMAIN=turn2.datowave.com \
 TURN2_EXTERNAL_IP=46.149.71.86 \

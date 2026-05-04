@@ -97,7 +97,7 @@ Legacy-файлы перенесены в `legacy/poc/`.
 
 Test host contour (server compose):
 
-- `SMOKE_AUTH_COMPOSE_FILE=infra/docker-compose.host.yml SMOKE_AUTH_ENV_FILE=infra/.env.host SMOKE_AUTH_POSTGRES_SERVICE=boltorezka-db-test SMOKE_AUTH_API_SERVICE=boltorezka-api-test SMOKE_API_URL=https://test.datowave.com npm run smoke:auth:bootstrap`
+- `SMOKE_AUTH_COMPOSE_FILE=infra/docker-compose.host.yml SMOKE_AUTH_ENV_FILE=infra/.env.host SMOKE_AUTH_POSTGRES_SERVICE=datowave-db-test SMOKE_AUTH_API_SERVICE=datowave-api-test SMOKE_API_URL=https://test.datowave.com npm run smoke:auth:bootstrap`
 
 После этого можно запускать full smoke:
 

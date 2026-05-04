@@ -158,7 +158,7 @@ CREATE TABLE IF NOT EXISTS user_presence (
 
 - Формат: `^[a-zA-Z0-9][a-zA-Z0-9_.\-]{1,30}[a-zA-Z0-9]$` (3–32 символа).
 - URL: `https://datowave.com/@{username}` — публичная страница (без авторизации: имя + аватар + кнопка «Открыть в приложении»; с авторизацией: полный профиль + «Написать» + «В контакты»).
-- Deep link: `boltorezka://profile/{username}` (для desktop-клиента).
+- Deep link: `datowave://profile/{username}` (для desktop-клиента).
 
 ### 2.2 API
 

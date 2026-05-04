@@ -129,7 +129,7 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 - Validation note (hardened smoke): smoke `chat:object-storage` расширен проверками `Attachment URL content-type` и reject для unsupported `mime`/oversized `size`; `test` deploy+smoke прошел на SHA `f48a8d2759987ed71de93c7cf78c4ee7c6a3b816`.
 - Validation note (read metrics): в `/v1/rooms/:slug/messages` добавлены best-effort метрики чтения `chat_read_messages_total`, `chat_read_messages_with_attachments`, `chat_read_messages_legacy_inline_data_url`, `chat_read_messages_plain_text`; деплой `test` прошел на SHA `98e1f32286a9a182474d8fe8ed2d6d2c0b91b999`, метрики фиксируются в postdeploy summary.
 - Validation note (legacy removal): web перешел на attachments-only рендер/запись (без markdown/base64 fallback в `text`), infra build-arg `VITE_CHAT_OBJECT_STORAGE_WRITE` удален; `test` deploy+smoke прошел на SHA `c19af1a1d4599c2632fa6ba78556dc538dcc4717`.
-- Validation note (minio stage A): в host compose добавлен opt-in профиль `minio-test` (`boltorezka-minio-test` + `boltorezka-minio-test-init`) и env-шаблон для MinIO bootstrap (`TEST_MINIO_*`, `CHAT_STORAGE_PROVIDER`).
+- Validation note (minio stage A): в host compose добавлен opt-in профиль `minio-test` (`datowave-minio-test` + `datowave-minio-test-init`) и env-шаблон для MinIO bootstrap (`TEST_MINIO_*`, `CHAT_STORAGE_PROVIDER`).
 - Validation note (minio smoke gate): добавлен `smoke:minio:storage` и опциональный postdeploy gate `SMOKE_MINIO_STORAGE=1` с отдельным статусом `SMOKE_MINIO_STORAGE_STATUS` в summary.
 - Validation note (test deploy): деплой `test` + postdeploy smoke прошел на SHA `631ade048b1333b65db8bbbd859689c9475a0e3b` c `SMOKE_CHAT_OBJECT_STORAGE=1` и `SMOKE_MINIO_STORAGE=1`; `smoke:minio:storage` корректно отмечен как `skip` при `TEST_CHAT_STORAGE_PROVIDER=localfs`.
 - Validation note (stage C dry cutover): после фикса `minio-test-init` (retry loop ожидания MinIO) test deploy+smoke прошел на SHA `ad46f8a8593cd9ad49cf2aa1f6f89a0f330bde90` с runtime overrides `TEST_CHAT_STORAGE_PROVIDER=minio`, `SMOKE_CHAT_OBJECT_STORAGE=1`, `SMOKE_MINIO_STORAGE=1`; `smoke:chat:object-storage` и `smoke:minio:storage` -> `ok`.
@@ -144,11 +144,11 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 - Validation note (rate-limit + audit logs): на SHA `3e13467bf65d6e571b99cf6f868b212bcf8ace19` добавлены rate-limit preHandler'ы для `POST /v1/chat/uploads/init` и `POST /v1/chat/uploads/finalize`, а также structured audit events (`chat.upload.init`, `chat.upload.put`, `chat.upload.finalize`) с полями `userId/roomSlug/storageKey/sizeBytes/mimeType/status`; также добавлен retry-hardening в `smoke:chat:object-storage`. Test `deploy:test:smoke` прошел `done` с storage-focused флагами.
 - Validation note (minio service-account policy): в `minio-test-init` добавено bootstrap-действие: bucket policy `chat-attachments-rw` (ListBucket + Get/Put/DeleteObject на target bucket) и attach к выделенному API user (`TEST_MINIO_API_USER`/`TEST_MINIO_API_PASSWORD`), с fallback на root creds только при отсутствии API user vars.
 - Validation note (automatic orphan cleanup): добавлен ops script `scripts/ops/chat-orphan-cleanup.sh` и scheduler manifest `scripts/ops/scheduler/jobs/chat-orphan-cleanup.env`; регулярный вызов cleanup endpoint теперь выполняется автоматически каждые 6 часов через launchd/scheduler adapter.
-- Validation note (prod minio cutover): на SHA `bc4e50416c2b0356712620fae100554a53574092` выполнен `deploy:prod` из `origin/main` с `PROD_CHAT_STORAGE_PROVIDER=minio`, подняты `boltorezka-minio-prod`/`boltorezka-minio-prod-init`; storage-focused postdeploy smoke (prod scope) завершился `SMOKE_STATUS=pass` с `chat_object_storage=pass`, `chat_orphan_cleanup=pass`, `minio_storage=pass`, `chat_storage_put_fail_delta=0`.
+- Validation note (prod minio cutover): на SHA `bc4e50416c2b0356712620fae100554a53574092` выполнен `deploy:prod` из `origin/main` с `PROD_CHAT_STORAGE_PROVIDER=minio`, подняты `datowave-minio-prod`/`datowave-minio-prod-init`; storage-focused postdeploy smoke (prod scope) завершился `SMOKE_STATUS=pass` с `chat_object_storage=pass`, `chat_orphan_cleanup=pass`, `minio_storage=pass`, `chat_storage_put_fail_delta=0`.
 - Validation note (prod rollback drill): выполнен операционный цикл `minio -> localfs -> minio` на `origin/main` (локальный rollback на SHA `79bef28fe6d69ea0f4e44043909e95fae5ee38fa`, затем возврат в `minio` на том же SHA); проверены `health=ok` в rollback-точке и финальный storage-focused smoke `SMOKE_STATUS=pass` с `chat_object_storage=pass`, `chat_orphan_cleanup=pass`, `minio_storage=pass`, `chat_storage_put_fail_delta=0`.
 - Validation note (legacy inline cleanup stage 4): добавлен ops script `scripts/ops/chat-legacy-inline-cleanup.sh` с режимами `dry-run|apply|rollback` и backup-таблицей `message_legacy_inline_cleanup_backup`; на test подтвержден reversible flow: `rollback run=legacy-inline-test-20260320-2 -> restored_count=1`, затем `apply run=legacy-inline-test-20260320-3 -> candidate=1 backup=1 updated=1 verify=1|0`, финальный dry-run `0|0`; на prod dry-run `0|0` (legacy inline payloads отсутствуют, cleanup no-op).
 - Validation note (web SRP send/render): send-path вынесен в UI-agnostic сервис `apps/web/src/services/chatMessageSendService.ts` (hook только маппит result -> UI feedback), render-path переведен на view-model mapper `apps/web/src/utils/chatMessageViewModel.ts`, который подготавливает данные перед рендером в `ChatPanel`.
-- Validation note (minio lifecycle policy): в `boltorezka-minio-test-init` и `boltorezka-minio-prod-init` добавлен отдельный S3 lifecycle rule для bucket через `mc ilm rule add --expire-delete-marker` (идемпотентный bootstrap, не затрагивает текущие объектные данные).
+- Validation note (minio lifecycle policy): в `datowave-minio-test-init` и `datowave-minio-prod-init` добавлен отдельный S3 lifecycle rule для bucket через `mc ilm rule add --expire-delete-marker` (идемпотентный bootstrap, не затрагивает текущие объектные данные).
 
 ## 10) MinIO rollout plan (draft)
 
@@ -159,7 +159,7 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 
 ### 10.2 Stage A - MinIO foundation on test
 
-- [x] Добавить `boltorezka-minio-test` service в host compose (`minio/minio`).
+- [x] Добавить `datowave-minio-test` service в host compose (`minio/minio`).
 - [x] Создать bucket `chat-attachments-test` и policy только для service account API.
 - [x] Вынести endpoint/credentials/bucket в env (`CHAT_STORAGE_PROVIDER=minio`, `CHAT_MINIO_*`).
 - [x] Добавить health/smoke проверку доступности MinIO (S3 API health endpoints).
@@ -179,7 +179,7 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 
 ### 10.5 Stage D - Prod cutover
 
-- [x] После подтверждения `test` развернуть `boltorezka-minio-prod`.
+- [x] После подтверждения `test` развернуть `datowave-minio-prod`.
 - [x] Переключить `prod` на provider=`minio` только после smoke в `test` и явного approval.
 - [x] Зафиксировать rollback: вернуть provider=`localfs` без миграции API контрактов.
 
@@ -189,7 +189,7 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 
 - [x] Подтверждено явное approval на `prod` rollout.
 - [x] Подтвержден latest `origin/main` в `test` и green storage gates (`chat:object-storage`, `chat:orphan-cleanup`, `minio:storage`, `chat_storage_put_fail_delta=0`).
-- [x] В `infra/docker-compose.host.yml` присутствуют `boltorezka-minio-prod` и `boltorezka-minio-prod-init` (по аналогии с test).
+- [x] В `infra/docker-compose.host.yml` присутствуют `datowave-minio-prod` и `datowave-minio-prod-init` (по аналогии с test).
 - [x] В `infra/.env.host` на сервере заполнены `PROD_MINIO_*` и `PROD_CHAT_MINIO_*`.
 
 #### D1. Infra apply (prod MinIO service)
@@ -197,13 +197,13 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 - [x] Деплой `origin/main` в `test` с smoke из main (обязательный gate перед prod):
 
 ```bash
-ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 SMOKE_CHAT_OBJECT_STORAGE=1 SMOKE_CHAT_ORPHAN_CLEANUP=1 SMOKE_MINIO_STORAGE=1 SMOKE_CHAT_STORAGE_METRICS=1 SMOKE_CHAT_STORAGE_PUT_FAIL_THRESHOLD=0 npm run deploy:test:smoke'
+ssh mac-mini 'cd ~/srv/datowave && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 SMOKE_CHAT_OBJECT_STORAGE=1 SMOKE_CHAT_ORPHAN_CLEANUP=1 SMOKE_MINIO_STORAGE=1 SMOKE_CHAT_STORAGE_METRICS=1 SMOKE_CHAT_STORAGE_PUT_FAIL_THRESHOLD=0 npm run deploy:test:smoke'
 ```
 
 - [x] Переключение prod runtime на MinIO и prod deploy:
 
 ```bash
-ssh mac-mini 'cd ~/srv/boltorezka && PROD_REF=origin/main npm run deploy:prod'
+ssh mac-mini 'cd ~/srv/datowave && PROD_REF=origin/main npm run deploy:prod'
 ```
 
 #### D2. Post-prod storage smoke
@@ -211,7 +211,7 @@ ssh mac-mini 'cd ~/srv/boltorezka && PROD_REF=origin/main npm run deploy:prod'
 - [x] Запустить postdeploy smoke на prod с storage gate-ами:
 
 ```bash
-ssh mac-mini 'cd ~/srv/boltorezka && SMOKE_API_URL=https://boltorezka.gismalink.art SMOKE_WEB_BASE_URL=https://boltorezka.gismalink.art SMOKE_CHAT_OBJECT_STORAGE=1 SMOKE_CHAT_ORPHAN_CLEANUP=1 SMOKE_MINIO_STORAGE=1 SMOKE_CHAT_STORAGE_METRICS=1 SMOKE_CHAT_STORAGE_PUT_FAIL_THRESHOLD=0 npm run smoke:test:postdeploy'
+ssh mac-mini 'cd ~/srv/datowave && SMOKE_API_URL=https://datowave.com SMOKE_WEB_BASE_URL=https://datowave.com SMOKE_CHAT_OBJECT_STORAGE=1 SMOKE_CHAT_ORPHAN_CLEANUP=1 SMOKE_MINIO_STORAGE=1 SMOKE_CHAT_STORAGE_METRICS=1 SMOKE_CHAT_STORAGE_PUT_FAIL_THRESHOLD=0 npm run smoke:test:postdeploy'
 ```
 
 - [x] Проверить summary: `chat_object_storage=pass`, `chat_orphan_cleanup=pass`, `minio_storage=pass`, `chat_storage_put_fail_delta=0`.
@@ -222,7 +222,7 @@ ssh mac-mini 'cd ~/srv/boltorezka && SMOKE_API_URL=https://boltorezka.gismalink.
 - [x] Быстрый rollback path документирован и проверен:
 
 ```bash
-ssh mac-mini 'cd ~/srv/boltorezka && sed -i "" "s/^PROD_CHAT_STORAGE_PROVIDER=.*/PROD_CHAT_STORAGE_PROVIDER=localfs/" infra/.env.host && PROD_REF=origin/main npm run deploy:prod'
+ssh mac-mini 'cd ~/srv/datowave && sed -i "" "s/^PROD_CHAT_STORAGE_PROVIDER=.*/PROD_CHAT_STORAGE_PROVIDER=localfs/" infra/.env.host && PROD_REF=origin/main npm run deploy:prod'
 ```
 
 - [x] После rollback подтверждено: API `health=ok`, сообщения/вложения доступны, storage-specific smoke не показывает регрессий API.

@@ -2,7 +2,7 @@
  * telemetry.ts — клиентский трекер событий web/desktop UI.
  *
  * Назначение:
- * - Собирает метаинформацию о runtime (web/desktop, platform, версия Electron) из window.boltorezkaDesktop.
+ * - Собирает метаинформацию о runtime (web/desktop, platform, версия Electron) из window.datowaveDesktop.
  * - Отправляет события на сервер по `POST /v1/telemetry/web` (keepalive: true, ошибки сети глушатся).
  * - Подкладывает Bearer-токен, если он передан вызывающим кодом.
  *
@@ -15,12 +15,12 @@ type DesktopBridgeInfo = {
 
 declare global {
   interface Window {
-    boltorezkaDesktop?: DesktopBridgeInfo;
+    datowaveDesktop?: DesktopBridgeInfo;
   }
 }
 
 function getRuntimeTelemetryMeta() {
-  const desktop = typeof window !== "undefined" ? window.boltorezkaDesktop : undefined;
+  const desktop = typeof window !== "undefined" ? window.datowaveDesktop : undefined;
   if (desktop && desktop.platform && desktop.version) {
     return {
       runtime: "desktop",

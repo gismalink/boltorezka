@@ -1,4 +1,4 @@
-const AUTH_TOKEN_STORAGE_KEY = "boltorezka_token";
+const AUTH_TOKEN_STORAGE_KEY = "datowave_token";
 
 export const AUTH_COOKIE_MODE = import.meta.env.VITE_AUTH_COOKIE_MODE === "1";
 

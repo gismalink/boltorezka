@@ -9,7 +9,7 @@ Scope:
 
 ## 1) Preconditions
 
-- Branch with LiveKit foundation changes is deployed to `~/srv/boltorezka` in `test`.
+- Branch with LiveKit foundation changes is deployed to `~/srv/datowave` in `test`.
 - `infra/.env.host` contains:
   - `LIVEKIT_TEST_API_KEY`
   - `LIVEKIT_TEST_API_SECRET`
@@ -30,19 +30,19 @@ Recommended baseline (validated):
 On server:
 
 ```bash
-cd ~/srv/boltorezka
+cd ~/srv/datowave
 npm run livekit:test:up
 ```
 
 Verify service + logs:
 
 ```bash
-cd ~/srv/boltorezka
+cd ~/srv/datowave
 npm run livekit:test:check
 ```
 
 Expected:
-- `boltorezka-livekit-test` is `Up`.
+- `datowave-livekit-test` is `Up`.
 - Logs do not contain repeated fatal bootstrap errors.
 
 ## 3) Routing baseline
@@ -85,7 +85,7 @@ Expected response fields:
 Stop LiveKit service only:
 
 ```bash
-cd ~/srv/boltorezka
+cd ~/srv/datowave
 npm run livekit:test:down
 ```
 

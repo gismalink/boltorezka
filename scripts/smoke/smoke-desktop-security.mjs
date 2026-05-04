@@ -114,7 +114,7 @@ async function main() {
       const hasRequire = typeof (globalThis).require !== "undefined";
       const hasProcess = typeof (globalThis).process !== "undefined";
       const hasBuffer = typeof (globalThis).Buffer !== "undefined";
-      const bridge = (globalThis).boltorezkaDesktop || null;
+      const bridge = (globalThis).datowaveDesktop || null;
       const bridgeKeys = bridge && typeof bridge === "object" ? Object.keys(bridge).sort() : [];
       const popupResult = window.open("https://example.com", "_blank");
       const popupBlocked = popupResult === null;

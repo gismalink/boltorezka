@@ -7,15 +7,15 @@
 - [x] Сборка desktop foundation проходит:
   - `npm run desktop:smoke`
 - [x] Runtime desktop smoke проходит:
-  - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:runtime`
+  - `SMOKE_WEB_BASE_URL=https://test.datowave.com npm run smoke:desktop:runtime`
 - [x] Telemetry desktop smoke проходит:
-  - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:telemetry`
+  - `SMOKE_WEB_BASE_URL=https://test.datowave.com npm run smoke:desktop:telemetry`
 - [x] Есть собранный desktop артефакт в `apps/desktop-electron/dist`.
 - [x] Web renderer собирается и вшивается в desktop package.
 
 ## 2) Runtime smoke (manual, test env)
 
-- [x] Приложение стартует и показывает UI Boltorezka.
+- [x] Приложение стартует и показывает UI Datowave.
 - [x] Авторизация открывается штатно (SSO redirect без ошибок).
 - [x] Подключение к комнате выполняется.
 - [x] Микрофон mute/unmute работает.
@@ -24,15 +24,15 @@
 ## 3) Reconnect and stability smoke
 
 - [x] Кратковременный network flap: reconnect восстанавливается.
-  - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:reconnect`
+  - `SMOKE_WEB_BASE_URL=https://test.datowave.com npm run smoke:desktop:reconnect`
 - [x] Reconnect soak automation (несколько циклов подряд) проходит.
-  - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SOAK_CYCLES=8 npm run smoke:desktop:soak`
+  - `SMOKE_WEB_BASE_URL=https://test.datowave.com SMOKE_DESKTOP_SOAK_CYCLES=8 npm run smoke:desktop:soak`
 - [x] Sleep/wake ноутбука: сессия восстанавливается без crash.
-  - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SLEEP_WAKE_REQUIRE_SUSPEND=1 npm run smoke:desktop:sleep-wake`
+  - `SMOKE_WEB_BASE_URL=https://test.datowave.com SMOKE_DESKTOP_SLEEP_WAKE_REQUIRE_SUSPEND=1 npm run smoke:desktop:sleep-wake`
 - [x] 15+ минут voice-сессии без критичных runtime errors.
-  - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:voice-checkpoint:15m`
+  - `SMOKE_WEB_BASE_URL=https://test.datowave.com npm run smoke:desktop:voice-checkpoint:15m`
 - [x] 2h long-run stability soak (standalone packaged desktop gate) — закрыт practical evidence циклом `>=3h` на standalone test build (Cycle #57/#59, PASS).
-  - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_STABILITY_DURATION_MS=7200000 npm run smoke:desktop:stability`
+  - `SMOKE_WEB_BASE_URL=https://test.datowave.com SMOKE_DESKTOP_STABILITY_DURATION_MS=7200000 npm run smoke:desktop:stability`
   - Policy: выполняется только на этапе standalone packaged client (post-signing/notarization).
 
 ## 4) Security smoke
@@ -40,7 +40,7 @@
 - [x] Renderer не имеет доступа к Node API (`nodeIntegration=false`).
 - [x] `contextIsolation=true`, `sandbox=true`.
 - [x] Внешние ссылки открываются во внешнем браузере, не внутри app window.
-  - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:security`
+  - `SMOKE_WEB_BASE_URL=https://test.datowave.com npm run smoke:desktop:security`
 
 ## 5) Release gate policy
 

@@ -24,7 +24,7 @@ Scope: отдельный трек по email auth/register/reset/verify и по
 
 ### 2.2 OIDC clients + claims
 
-- [ ] Создать clients: `boltorezka-web`, `boltorezka-desktop`.
+- [ ] Создать clients: `datowave-web`, `datowave-desktop`.
 - [ ] Проверить claims: `sub`, `email`, `email_verified`, `preferred_username`, `name`, `auth_time`, `sid`, `roles`.
 - [ ] Проверить mapping роли по умолчанию и audit-log.
 

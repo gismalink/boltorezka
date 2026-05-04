@@ -21,22 +21,22 @@ Web (`test`):
 - Post logout redirect URI: `https://test.datowave.com/`
 
 Desktop (`test`):
-- Redirect URI: `boltorezka://auth/callback`
+- Redirect URI: `datowave://auth/callback`
 - Post logout redirect URI: `https://test.datowave.com/desktop/logout-complete`
 
 ## 3) Authentik clients (draft profile)
 
-Client `boltorezka-web`:
+Client `datowave-web`:
 - Type: OpenID Connect
 - Grant: Authorization Code + PKCE
 - Redirect URI: `https://test.auth.datowave.com/auth/callback`
 - Post logout redirect URI: `https://test.datowave.com/`
 - Scopes: `openid profile email offline_access`
 
-Client `boltorezka-desktop`:
+Client `datowave-desktop`:
 - Type: OpenID Connect
 - Grant: Authorization Code + PKCE
-- Redirect URI: `boltorezka://auth/callback`
+- Redirect URI: `datowave://auth/callback`
 - Post logout redirect URI: `https://test.datowave.com/desktop/logout-complete`
 - Scopes: `openid profile email offline_access`
 

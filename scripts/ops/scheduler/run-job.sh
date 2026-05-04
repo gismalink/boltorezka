@@ -109,7 +109,7 @@ main() {
 
   mkdir -p "$SCHEDULER_LOG_DIR/$job_id"
 
-  local lock_dir="/tmp/boltorezka-scheduler-${job_id}.lock"
+  local lock_dir="/tmp/datowave-scheduler-${job_id}.lock"
   if ! mkdir "$lock_dir" 2>/dev/null; then
     echo "[scheduler] skipped already running job: $job_id"
     scheduler_append_event "{\"ts\":\"$(scheduler_now_utc)\",\"job_id\":\"$job_id\",\"status\":\"skipped_locked\"}"

@@ -1,4 +1,4 @@
-# Merge-Ready Checklist (Boltorezka + Edge)
+# Merge-Ready Checklist (Datowave + Edge)
 
 > Legacy status: dated snapshot (`2026-03-04`), not a current release checklist.
 
@@ -7,7 +7,7 @@
 
 ## 1) Current references
 
-### Boltorezka
+### Datowave
 
 - Feature branch: `feature/video-stream-overlay-chat-toggle`
 - Latest feature SHA: `1f5f05f`
@@ -21,12 +21,12 @@
 
 ## 2) Merge order (required)
 
-1. Merge Boltorezka feature branch into `main`.
+1. Merge Datowave feature branch into `main`.
 2. Re-run test rollout from `origin/main` (same smoke gate).
 3. Refresh pre-prod decision package with `main` SHA.
 4. Keep decision status `NO-GO` until explicit prod approval fields are filled.
 
-## 3) Boltorezka merge scope (must include)
+## 3) Datowave merge scope (must include)
 
 - API static toggle (`API_SERVE_STATIC`) and API/static decoupling.
 - Caddy-only static delivery flow (deploy scripts sync bundle into edge static dir).
@@ -35,7 +35,7 @@
 ## 4) Post-merge test validation (from main)
 
 ```bash
-ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test:smoke'
+ssh mac-mini 'cd ~/srv/datowave && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test:smoke'
 ```
 
 Expected gate:

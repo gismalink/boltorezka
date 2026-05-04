@@ -39,13 +39,13 @@ export function useAppShellLifecycleEffects({
   setPendingChatImageDataUrl
 }: UseAppShellLifecycleEffectsArgs) {
   useEffect(() => {
-    localStorage.setItem("boltorezka_lang", lang);
+    localStorage.setItem("datowave_lang", lang);
     document.documentElement.lang = lang;
   }, [lang]);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-ui-theme", selectedUiTheme);
-    localStorage.setItem("boltorezka_ui_theme", selectedUiTheme);
+    localStorage.setItem("datowave_ui_theme", selectedUiTheme);
   }, [selectedUiTheme]);
 
   useEffect(() => {
@@ -91,7 +91,7 @@ export function useAppShellLifecycleEffects({
     // Сервер — источник истины. Если backend сохранил факт прохождения
     // первой панели, оверлей не показываем и кэшируем флаг в localStorage,
     // чтобы при следующей загрузке не мигало даже до резолва /me.
-    const storageKey = `boltorezka_intro_v1_seen:${user.id}`;
+    const storageKey = `datowave_intro_v1_seen:${user.id}`;
     if (user.welcome_intro_completed_at) {
       try { localStorage.setItem(storageKey, "1"); } catch { /* ignore */ }
       setShowFirstRunIntro(false);

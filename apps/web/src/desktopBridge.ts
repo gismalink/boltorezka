@@ -2,7 +2,7 @@
  * desktopBridge.ts — типы и геттеры для моста web ↔ Electron-обёртки.
  *
  * Назначение:
- * - Описывает форму `window.boltorezkaDesktop`, который проксирует Electron preload-скрипт.
+ * - Описывает форму `window.datowaveDesktop`, который проксирует Electron preload-скрипт.
  * - Предоставляет три безопасных геттера: `getDesktopBridgeInfo`, `getDesktopUpdateBridge`,
  *   `getDesktopNotificationBridge` — каждый возвращает `null`, если соответствующий API недоступен
  *   (например, web-сборка или старая версия desktop-обёртки).
@@ -96,7 +96,7 @@ type DesktopBridgeWithUpdate = DesktopBridgeInfo & {
 };
 
 export function getDesktopBridgeInfo(): DesktopBridgeInfo | null {
-  const bridge = (window as Window & { boltorezkaDesktop?: DesktopBridgeInfo }).boltorezkaDesktop;
+  const bridge = (window as Window & { datowaveDesktop?: DesktopBridgeInfo }).datowaveDesktop;
   if (!bridge) {
     return null;
   }
@@ -111,7 +111,7 @@ export function getDesktopBridgeInfo(): DesktopBridgeInfo | null {
 }
 
 export function getDesktopUpdateBridge(): DesktopUpdateBridge | null {
-  const bridge = (window as Window & { boltorezkaDesktop?: DesktopBridgeWithUpdate }).boltorezkaDesktop;
+  const bridge = (window as Window & { datowaveDesktop?: DesktopBridgeWithUpdate }).datowaveDesktop;
   if (!bridge?.update) {
     return null;
   }
@@ -131,7 +131,7 @@ export function getDesktopUpdateBridge(): DesktopUpdateBridge | null {
 }
 
 export function getDesktopNotificationBridge(): DesktopNotificationBridge | null {
-  const bridge = (window as Window & { boltorezkaDesktop?: DesktopBridgeWithUpdate }).boltorezkaDesktop;
+  const bridge = (window as Window & { datowaveDesktop?: DesktopBridgeWithUpdate }).datowaveDesktop;
   if (!bridge?.notifications) {
     return null;
   }

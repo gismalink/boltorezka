@@ -63,7 +63,7 @@ async function establishSessionAndRoom(page) {
       return { ok: false, stage: "handoff_exchange", status: exchange.status };
     }
 
-    localStorage.setItem("boltorezka_room_slug", slug);
+    localStorage.setItem("datowave_room_slug", slug);
     return { ok: true };
   }, { token: bearer, slug: roomSlug });
 

@@ -3,20 +3,20 @@
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.boltorezka.log-cleanup</string>
+  <string>com.datowave.log-cleanup</string>
 
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>
-    <string>/Users/davidshvartsman/srv/boltorezka/scripts/ops/cleanup-server-logs.sh</string>
+    <string>/Users/davidshvartsman/srv/datowave/scripts/ops/cleanup-server-logs.sh</string>
   </array>
 
   <key>EnvironmentVariables</key>
   <dict>
     <key>PATH</key>
     <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
-    <key>BOLTOREZKA_BASE_DIR</key>
-    <string>/Users/davidshvartsman/srv/boltorezka</string>
+    <key>DATOWAVE_BASE_DIR</key>
+    <string>/Users/davidshvartsman/srv/datowave</string>
     <key>EDGE_BASE_DIR</key>
     <string>/Users/davidshvartsman/srv/edge</string>
     <key>LOG_RETENTION_DAYS</key>
@@ -27,7 +27,7 @@
   <integer>3600</integer>
 
   <key>WorkingDirectory</key>
-  <string>/Users/davidshvartsman/srv/boltorezka</string>
+  <string>/Users/davidshvartsman/srv/datowave</string>
 
   <key>RunAtLoad</key>
   <true/>
@@ -36,9 +36,9 @@
   <false/>
 
   <key>StandardOutPath</key>
-  <string>/Users/davidshvartsman/srv/edge/logs/boltorezka-log-cleanup.out.log</string>
+  <string>/Users/davidshvartsman/srv/edge/logs/datowave-log-cleanup.out.log</string>
 
   <key>StandardErrorPath</key>
-  <string>/Users/davidshvartsman/srv/edge/logs/boltorezka-log-cleanup.err.log</string>
+  <string>/Users/davidshvartsman/srv/edge/logs/datowave-log-cleanup.err.log</string>
 </dict>
 </plist>

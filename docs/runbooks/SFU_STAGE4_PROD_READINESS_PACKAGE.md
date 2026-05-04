@@ -38,7 +38,7 @@
   - dedicated live-room stress (6 participants) passed: `liveRoomOk=true`, `totalActions=42`, `leaveRejoinEvents=2`, `acceptedNacks=0`
   - explicit late-join/leave stress passed (`SMOKE_CALL_LIVE_ROOM_REQUIRE_LATE_JOIN=1`): `liveRoomOk=true`, `totalActions=44`, `lateJoinEvents=1`, `leaveRejoinEvents=2`, `acceptedNacks=0`
 - Baseline comparison evidence (`p2p vs sfu`, same ref):
-  - Artifact: `~/srv/boltorezka/.deploy/compare-p2p-sfu-20260308T184848Z.md`
+  - Artifact: `~/srv/datowave/.deploy/compare-p2p-sfu-20260308T184848Z.md`
   - `p2p`: `SMOKE_STATUS=pass`, `SMOKE_REALTIME_MEDIA_STATUS=pass`, `SMOKE_TURN_TLS_STATUS=pass`, one-way `audio=0`, `video=0`, `ACK=51`, `NACK=3`
   - `sfu`: `SMOKE_STATUS=pass`, `SMOKE_REALTIME_MEDIA_STATUS=pass`, `SMOKE_TURN_TLS_STATUS=pass`, one-way `audio=0`, `video=0`, `ACK=33`, `NACK=1`
   - Verdict: SFU не хуже P2P по setup/reconnect в test-кандидате, с меньшим signaling шумом.
@@ -47,7 +47,7 @@
   - Result: `ok=true`, `emulation.peerA=desktop`, `emulation.peerB=mobile`, one-way `audio=0`, `video=0`, `cameraStateConvergenceOk=true`, `iceUfragChanged=true`.
 - Network handoff evidence (manual, test-room):
   - Scenario: repeated `Wi-Fi -> LTE -> Wi-Fi` switches without page reload.
-  - Server log snapshot (`boltorezka-api-test`, last 20m): `ws.connected=1`, `ws.disconnected/reconnect=0`, `call.offer/call.answer=338`.
+  - Server log snapshot (`datowave-api-test`, last 20m): `ws.connected=1`, `ws.disconnected/reconnect=0`, `call.offer/call.answer=338`.
   - Verdict: room state preserved, media path survived handoff via renegotiation (no forced reconnect loop).
 - WS privacy/logging evidence:
   - `call.*` server logs сохраняют только агрегированную SDP/ICE мета-информацию, ICE address/port маскируются.

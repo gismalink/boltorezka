@@ -4,11 +4,11 @@
 //
 // Requires: SMOKE_TEST_BEARER_TOKEN — used to acquire a session cookie via /v1/auth/refresh,
 //           then dropped for the actual ws-ticket call to simulate cookie-only auth.
-// Optional: SMOKE_SESSION_COOKIE_NAME — defaults to boltorezka_session_test.
+// Optional: SMOKE_SESSION_COOKIE_NAME — defaults to datowave_session_test.
 
 const baseUrl = (process.env.SMOKE_API_URL ?? 'https://test.datowave.com').replace(/\/+$/, '');
 const token = String(process.env.SMOKE_TEST_BEARER_TOKEN ?? '').trim();
-const cookieName = String(process.env.SMOKE_SESSION_COOKIE_NAME ?? 'boltorezka_session_test').trim();
+const cookieName = String(process.env.SMOKE_SESSION_COOKIE_NAME ?? 'datowave_session_test').trim();
 const exportTokenFile = String(process.env.SMOKE_COOKIE_WS_EXPORT_TOKEN_FILE ?? '').trim();
 const skipLogout = String(process.env.SMOKE_COOKIE_WS_SKIP_LOGOUT ?? '0').trim() === '1';
 

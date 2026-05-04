@@ -11,7 +11,7 @@ try {
 }
 const isDev = !app.isPackaged;
 const rendererUrl = process.env.ELECTRON_RENDERER_URL || "http://127.0.0.1:5173";
-const desktopProtocol = "boltorezka";
+const desktopProtocol = "datowave";
 const allowMultipleInstances = !app.isPackaged
   && String(process.env.ELECTRON_ALLOW_MULTIPLE_INSTANCES || "0") === "1";
 const suppressExternalOpenForSmoke = String(process.env.ELECTRON_SMOKE_SUPPRESS_EXTERNAL_OPEN || "0") === "1";
@@ -435,9 +435,9 @@ function getRendererEntryUrl() {
 function getDesktopWindowTitle() {
   const version = String(app.getVersion() || "").trim();
   if (!version) {
-    return "Boltorezka";
+    return "Datowave";
   }
-  return `Boltorezka v${version}`;
+  return `Datowave v${version}`;
 }
 
 function withDesktopSsoParams(url, handoffCode = "", attemptId = "") {
@@ -520,7 +520,7 @@ function handleProtocolUrl(rawUrl) {
 }
 
 function openExternal(url) {
-  global.__boltorezkaLastExternalUrl = String(url || "");
+  global.__datowaveLastExternalUrl = String(url || "");
   if (suppressExternalOpenForSmoke) {
     return;
   }

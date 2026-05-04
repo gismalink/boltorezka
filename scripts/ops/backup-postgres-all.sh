@@ -3,9 +3,20 @@ set -euo pipefail
 
 COMPOSE_FILE="${BACKUP_COMPOSE_FILE:-infra/docker-compose.host.yml}"
 ENV_FILE="${BACKUP_ENV_FILE:-infra/.env.host}"
-BACKUP_ROOT="${BACKUP_ROOT:-$HOME/srv/backups/boltorezka/postgres}"
+BACKUP_ROOT="${BACKUP_ROOT:-$HOME/srv/backups/datowave/postgres}"
 RETENTION_DAYS="${RETENTION_DAYS:-14}"
+TMP_RETENTION_DAYS="${TMP_RETENTION_DAYS:-2}"
 TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+
+if [[ ! "$RETENTION_DAYS" =~ ^[0-9]+$ ]]; then
+  echo "[backup-db] RETENTION_DAYS must be a non-negative integer" >&2
+  exit 1
+fi
+
+if [[ ! "$TMP_RETENTION_DAYS" =~ ^[0-9]+$ ]]; then
+  echo "[backup-db] TMP_RETENTION_DAYS must be a non-negative integer" >&2
+  exit 1
+fi
 
 if [[ ! -f "$COMPOSE_FILE" ]]; then
   echo "[backup-db] compose file not found: $COMPOSE_FILE" >&2
@@ -24,6 +35,7 @@ compose() {
 run_backup_for_service() {
   local label="$1"
   local service="$2"
+  local db_user="$3"
   local target_dir="$BACKUP_ROOT/$label"
   local outfile="$target_dir/${TIMESTAMP}_pgdumpall.sql.gz"
   local checksum_file="${outfile}.sha256"
@@ -31,9 +43,16 @@ run_backup_for_service() {
 
   mkdir -p "$target_dir"
 
-  echo "[backup-db] backup $label from service=$service -> $outfile"
-  compose exec -T "$service" sh -lc 'PGPASSWORD="$POSTGRES_PASSWORD" pg_dumpall -U "$POSTGRES_USER" --clean --if-exists' \
-    | gzip -9 > "$tmp_file"
+  # Remove stale temp files from interrupted runs so backup dirs stay bounded.
+  find "$target_dir" -type f -name "*_pgdumpall.sql.gz.tmp" -mtime "+$TMP_RETENTION_DAYS" -delete || true
+
+  echo "[backup-db] backup $label from service=$service user=$db_user -> $outfile"
+  if ! compose exec -T -e BACKUP_DB_USER_OVERRIDE="$db_user" "$service" sh -lc 'set -eu; db_user="${BACKUP_DB_USER_OVERRIDE:-${POSTGRES_USER:-postgres}}"; PGPASSWORD="${POSTGRES_PASSWORD:-}" pg_dumpall -U "$db_user" --clean --if-exists' \
+    | gzip -9 > "$tmp_file"; then
+    rm -f "$tmp_file"
+    echo "[backup-db] failed $label" >&2
+    return 1
+  fi
 
   mv "$tmp_file" "$outfile"
   shasum -a 256 "$outfile" > "$checksum_file"
@@ -44,7 +63,7 @@ run_backup_for_service() {
   echo "[backup-db] done $label"
 }
 
-run_backup_for_service "test" "${BACKUP_TEST_DB_SERVICE:-boltorezka-db-test}"
-run_backup_for_service "prod" "${BACKUP_PROD_DB_SERVICE:-boltorezka-db-prod}"
+run_backup_for_service "test" "${BACKUP_TEST_DB_SERVICE:-datowave-db-test}" "${BACKUP_TEST_DB_USER:-datowave_test}"
+run_backup_for_service "prod" "${BACKUP_PROD_DB_SERVICE:-datowave-db-prod}" "${BACKUP_PROD_DB_USER:-datowave_prod}"
 
 echo "[backup-db] all backups completed at $BACKUP_ROOT"

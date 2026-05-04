@@ -9,13 +9,13 @@ ENV_FILE="${SMOKE_ENV_FILE:-infra/.env.host}"
 SMOKE_ENV_SCOPE="${SMOKE_ENV_SCOPE:-test}"
 
 if [[ "$SMOKE_ENV_SCOPE" == "prod" ]]; then
-  POSTGRES_SERVICE="${SMOKE_POSTGRES_SERVICE:-boltorezka-db-prod}"
-  REDIS_SERVICE="${SMOKE_REDIS_SERVICE:-boltorezka-redis-prod}"
-  API_SERVICE="${SMOKE_API_SERVICE:-boltorezka-api-prod}"
+  POSTGRES_SERVICE="${SMOKE_POSTGRES_SERVICE:-datowave-db-prod}"
+  REDIS_SERVICE="${SMOKE_REDIS_SERVICE:-datowave-redis-prod}"
+  API_SERVICE="${SMOKE_API_SERVICE:-datowave-api-prod}"
 else
-  POSTGRES_SERVICE="${SMOKE_POSTGRES_SERVICE:-boltorezka-db-test}"
-  REDIS_SERVICE="${SMOKE_REDIS_SERVICE:-boltorezka-redis-test}"
-  API_SERVICE="${SMOKE_API_SERVICE:-boltorezka-api-test}"
+  POSTGRES_SERVICE="${SMOKE_POSTGRES_SERVICE:-datowave-db-test}"
+  REDIS_SERVICE="${SMOKE_REDIS_SERVICE:-datowave-redis-test}"
+  API_SERVICE="${SMOKE_API_SERVICE:-datowave-api-test}"
 fi
 
 USER_EMAIL="${SMOKE_USER_EMAIL:-smoke-rtc-1@example.test}"

@@ -23,8 +23,8 @@ type UseMediaDevicePreferencesArgs = {
 
 const FALLBACK_DEVICE_ID = "default";
 
-const OUTPUT_PREF_KEY = "boltorezka_selected_output_id";
-const VIDEO_INPUT_PREF_KEY = "boltorezka_selected_video_input_id";
+const OUTPUT_PREF_KEY = "datowave_selected_output_id";
+const VIDEO_INPUT_PREF_KEY = "datowave_selected_video_input_id";
 
 const EARPICE_OUTPUT_RE = /(earpiece|receiver|handset|phone|при[её]мник|телефон|communications?)/i;
 const SPEAKER_OUTPUT_RE = /(speaker|loud|громк|динамик)/i;
@@ -379,15 +379,15 @@ export function useMediaDevicePreferences({
   ]);
 
   useEffect(() => {
-    localStorage.setItem("boltorezka_mic_volume", String(micVolume));
+    localStorage.setItem("datowave_mic_volume", String(micVolume));
   }, [micVolume]);
 
   useEffect(() => {
-    localStorage.setItem("boltorezka_output_volume", String(outputVolume));
+    localStorage.setItem("datowave_output_volume", String(outputVolume));
   }, [outputVolume]);
 
   useEffect(() => {
-    localStorage.setItem("boltorezka_selected_input_id", selectedInputId);
+    localStorage.setItem("datowave_selected_input_id", selectedInputId);
   }, [selectedInputId]);
 
   useEffect(() => {

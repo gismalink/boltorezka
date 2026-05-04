@@ -46,7 +46,7 @@ if [[ ! "$schedule_value" =~ ^[1-9][0-9]*$ ]]; then
   exit 1
 fi
 
-label="com.boltorezka.scheduler.${job_id}"
+label="com.datowave.scheduler.${job_id}"
 run_script="$SCHEDULER_BASE_DIR/scripts/ops/scheduler/run-job.sh"
 out_log="${SCHEDULER_BASE_DIR}/.deploy/scheduler/logs/${job_id}/launchd.out.log"
 err_log="${SCHEDULER_BASE_DIR}/.deploy/scheduler/logs/${job_id}/launchd.err.log"
@@ -72,7 +72,7 @@ plist_content="<?xml version=\"1.0\" encoding=\"UTF-8\"?>
   <dict>
     <key>PATH</key>
     <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
-    <key>BOLTOREZKA_BASE_DIR</key>
+    <key>DATOWAVE_BASE_DIR</key>
     <string>${SCHEDULER_BASE_DIR}</string>
   </dict>
 

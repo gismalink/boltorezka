@@ -8,7 +8,7 @@ export const ICE_CONFIG = {
         //     urls: [
         //         'turns:gismalink.art:5349?transport=tcp'
         //     ],
-        //     username: 'boltorezka',
+        //     username: 'datowave',
         //     credential: 'Blt@Turn2024#Secure',
         //     credentialType: 'password'
         // }

@@ -42,7 +42,7 @@ async function main() {
   });
 
   await page.addInitScript(() => {
-    localStorage.setItem("boltorezka_lang", "en");
+    localStorage.setItem("datowave_lang", "en");
   });
 
   try {
@@ -58,7 +58,7 @@ async function main() {
       // In that case validate the recovery branch by synthesizing the pending flag.
       flowMode = "synthetic-recovery";
       await page.evaluate(() => {
-        sessionStorage.setItem("boltorezka_update_reload_pending", "1");
+        sessionStorage.setItem("datowave_update_reload_pending", "1");
       });
       await page.reload({ waitUntil: "domcontentloaded", timeout: timeoutMs });
       await page.locator("#root").waitFor({ state: "visible", timeout: timeoutMs });
@@ -66,7 +66,7 @@ async function main() {
         await overlayDialog.waitFor({ state: "visible", timeout: timeoutMs });
       } catch {
         const diagnostics = await page.evaluate(() => ({
-          pending: sessionStorage.getItem("boltorezka_update_reload_pending"),
+          pending: sessionStorage.getItem("datowave_update_reload_pending"),
           politeDialogs: document.querySelectorAll('div[role="dialog"][aria-live="polite"]').length,
           assertiveDialogs: document.querySelectorAll('div[role="dialog"][aria-live="assertive"]').length,
           bodyTextSnippet: String(document.body?.innerText || "").slice(0, 240)
@@ -75,9 +75,9 @@ async function main() {
       }
     }
 
-    const pendingKey = await page.evaluate(() => sessionStorage.getItem("boltorezka_update_reload_pending"));
+    const pendingKey = await page.evaluate(() => sessionStorage.getItem("datowave_update_reload_pending"));
     if (pendingKey !== "1") {
-      throw new Error(`expected session flag boltorezka_update_reload_pending=1, got ${pendingKey || "<empty>"}`);
+      throw new Error(`expected session flag datowave_update_reload_pending=1, got ${pendingKey || "<empty>"}`);
     }
 
     const continueBtn = overlayDialog.getByRole("button").first();
@@ -88,7 +88,7 @@ async function main() {
       throw new Error("app-updated overlay is still visible after continue");
     }
 
-    const pendingAfter = await page.evaluate(() => sessionStorage.getItem("boltorezka_update_reload_pending"));
+    const pendingAfter = await page.evaluate(() => sessionStorage.getItem("datowave_update_reload_pending"));
     if (pendingAfter !== null) {
       throw new Error("expected session flag to be removed after continue");
     }

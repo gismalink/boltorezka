@@ -5,7 +5,7 @@ set -euo pipefail
 COMPOSE_FILE="${HOST_COMPOSE_FILE:-infra/docker-compose.host.yml}"
 ENV_FILE="${HOST_ENV_FILE:-infra/.env.host}"
 PROFILE="${LIVEKIT_PROD_PROFILE:-livekit-prod}"
-SERVICE="boltorezka-livekit-prod"
+SERVICE="datowave-livekit-prod"
 SIGNAL_PORT="${PROD_LIVEKIT_SIGNAL_PORT:-7880}"
 
 if [[ ! -f "$COMPOSE_FILE" ]]; then

@@ -5,7 +5,7 @@ set -euo pipefail
 COMPOSE_FILE="${HOST_COMPOSE_FILE:-infra/docker-compose.host.yml}"
 ENV_FILE="${HOST_ENV_FILE:-infra/.env.host}"
 PROFILE="${LIVEKIT_TEST_PROFILE:-livekit-test}"
-SERVICE="boltorezka-livekit-test"
+SERVICE="datowave-livekit-test"
 
 if [[ ! -f "$COMPOSE_FILE" ]]; then
   echo "[livekit-test-up] compose file not found: $COMPOSE_FILE" >&2

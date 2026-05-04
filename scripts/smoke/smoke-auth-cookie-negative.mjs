@@ -3,7 +3,7 @@
 // Requires: SMOKE_TEST_BEARER_TOKEN with valid sid claim pointing at test env.
 const baseUrl = (process.env.SMOKE_API_URL ?? 'https://test.datowave.com').replace(/\/+$/, '');
 const token = String(process.env.SMOKE_TEST_BEARER_TOKEN ?? '').trim();
-const cookieName = process.env.SMOKE_SESSION_COOKIE_NAME ?? 'boltorezka_session_test';
+const cookieName = process.env.SMOKE_SESSION_COOKIE_NAME ?? 'datowave_session_test';
 
 if (!token) {
   console.log('[smoke:auth:cookie-negative] skipped: SMOKE_TEST_BEARER_TOKEN is not set');

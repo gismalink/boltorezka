@@ -1,9 +1,9 @@
-# Boltorezka Test Plan (MVP + Realtime + Load)
+# Datowave Test Plan (MVP + Realtime + Load)
 
 Status: Completed (historical execution artifact, archived 2026-03-21)
 
 Дата: 2026-03-02  
-Область: web client + api/realtime in `test` env (`test.boltorezka.gismalink.art`)
+Область: web client + api/realtime in `test` env (`test.datowave.com`)
 
 ## 1) Цели
 
@@ -31,7 +31,7 @@ Status: Completed (historical execution artifact, archived 2026-03-21)
 
 ## 3) Test environments
 
-- Primary: `test` server (`test.boltorezka.gismalink.art`).
+- Primary: `test` server (`test.datowave.com`).
 - Optional local repeat: docker host env (`infra/docker-compose.host.yml`).
 
 ## 4) Gate criteria
@@ -41,7 +41,7 @@ Status: Completed (historical execution artifact, archived 2026-03-21)
   - smoke:api PASS,
   - smoke:realtime PASS (`reconnectOk=true`),
   - manual mobile checks PASS,
-  - no critical errors in `boltorezka-api-test` logs (`--tail=300`).
+  - no critical errors in `datowave-api-test` logs (`--tail=300`).
 - **NO-GO:**
   - regressions in auth/room join/message send,
   - message edit/delete policy bypass,
@@ -83,7 +83,7 @@ Status: Completed (historical execution artifact, archived 2026-03-21)
 - Redis `ws:metrics:<day>` counters:
   - `ack_sent`, `nack_sent`, `chat_sent`, `chat_idempotency_hit`, `call_signal_sent`
 - Container stats:
-  - CPU, RSS, network RX/TX for `boltorezka-api-test`, `redis`, `db`, `turn`
+  - CPU, RSS, network RX/TX for `datowave-api-test`, `redis`, `db`, `turn`
 
 ### 6.2 API micro-load (HTTP)
 
@@ -138,9 +138,9 @@ Status: Completed (historical execution artifact, archived 2026-03-21)
 ## 9) Immediate next run commands
 
 ```bash
-ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/tailwind-user-dock npm run deploy:test:smoke'
-ssh mac-mini 'cd ~/srv/boltorezka && docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host ps'
-ssh mac-mini 'cd ~/srv/boltorezka && docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host logs --tail=300 boltorezka-api-test'
+ssh mac-mini 'cd ~/srv/datowave && TEST_REF=origin/feature/tailwind-user-dock npm run deploy:test:smoke'
+ssh mac-mini 'cd ~/srv/datowave && docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host ps'
+ssh mac-mini 'cd ~/srv/datowave && docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host logs --tail=300 datowave-api-test'
 ```
 
 ## 10) Execution snapshot (2026-03-02, cycle #1)

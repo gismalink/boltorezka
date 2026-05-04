@@ -43,7 +43,7 @@ const TILE_GAP = 12;
 const VIEWPORT_GUTTER = 12;
 const DEFAULT_Y = 76;
 const ASPECT_RATIO = 4 / 3;
-const VIDEO_LAYOUTS_STORAGE_KEY = "boltorezka_video_windows_layouts_v2";
+const VIDEO_LAYOUTS_STORAGE_KEY = "datowave_video_windows_layouts_v2";
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);

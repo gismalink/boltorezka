@@ -1,7 +1,7 @@
 import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import { asTrimmedString } from "../../../utils/stringUtils";
 
-const CHAT_DRAFTS_STORAGE_KEY = "boltorezka_chat_drafts_v1";
+const CHAT_DRAFTS_STORAGE_KEY = "datowave_chat_drafts_v1";
 
 type UseChatDraftsByScopeArgs = {
   userId: string | null;

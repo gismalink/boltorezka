@@ -220,7 +220,7 @@ describe("useChatPanelInboxNotifications", () => {
   });
 
   it("hydrates notified eventIds from localStorage (does not throw on bad JSON)", () => {
-    window.localStorage.setItem("boltorezka:notified-inbox-events", "{not json");
+    window.localStorage.setItem("datowave:notified-inbox-events", "{not json");
     apiMock.notificationInbox.mockResolvedValue({ items: [] });
 
     expect(() => {

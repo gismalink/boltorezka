@@ -18,7 +18,7 @@ module.exports = (wss) => {
                 'turn:gismalink.art:3478',
                 'turns:gismalink.art:5349'
             ],
-            username: 'boltorezka',
+            username: 'datowave',
             credential: 'Blt@Turn2024#Secure',
             credentialType: 'password'
         }],

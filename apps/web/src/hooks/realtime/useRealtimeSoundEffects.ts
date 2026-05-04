@@ -184,7 +184,7 @@ export function useRealtimeSoundEffects({
       if (!senderUserId || (me && senderUserId === me)) return;
       void playServerSound("chat_message");
     };
-    window.addEventListener("boltorezka:dm", handler);
-    return () => window.removeEventListener("boltorezka:dm", handler);
+    window.addEventListener("datowave:dm", handler);
+    return () => window.removeEventListener("datowave:dm", handler);
   }, [playServerSound, userId]);
 }

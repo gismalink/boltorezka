@@ -1,12 +1,12 @@
 # LOG_RETENTION_1DAY_RUNBOOK
 
-Purpose: enforce max 1-day retention for boltorezka operational logs on macOS server.
+Purpose: enforce max 1-day retention for datowave operational logs on macOS server.
 
 ## Scope
 
-- `~/srv/boltorezka/.deploy/*.log|*.tsv|*.out|*.err`
+- `~/srv/datowave/.deploy/*.log|*.tsv|*.out|*.err`
 - `~/srv/edge/logs/*.log|*.out|*.err`
-- `/tmp/livekit-media-smoke*.log`, `/tmp/deploy-livekit*.log`, `/tmp/boltorezka-smoke*.log`
+- `/tmp/livekit-media-smoke*.log`, `/tmp/deploy-livekit*.log`, `/tmp/datowave-smoke*.log`
 
 ## Script
 
@@ -16,7 +16,7 @@ Purpose: enforce max 1-day retention for boltorezka operational logs on macOS se
 Manual run:
 
 ```bash
-cd ~/srv/boltorezka
+cd ~/srv/datowave
 bash ./scripts/ops/cleanup-server-logs.sh
 ```
 
@@ -28,20 +28,20 @@ bash ./scripts/ops/cleanup-server-logs.sh
 Install/refresh on server:
 
 ```bash
-cd ~/srv/boltorezka
+cd ~/srv/datowave
 bash ./scripts/ops/scheduler/install-launchd-job.sh cleanup-server-logs
 ```
 
 Verify agent:
 
 ```bash
-launchctl print "gui/$(id -u)/com.boltorezka.scheduler.cleanup-server-logs" | sed -n '1,80p'
+launchctl print "gui/$(id -u)/com.datowave.scheduler.cleanup-server-logs" | sed -n '1,80p'
 ```
 
 Execution history:
 
 ```bash
-tail -n 30 ~/srv/boltorezka/.deploy/scheduler/executions.ndjson
+tail -n 30 ~/srv/datowave/.deploy/scheduler/executions.ndjson
 ```
 
 ## Notes

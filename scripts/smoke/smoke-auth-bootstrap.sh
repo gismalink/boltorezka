@@ -101,8 +101,8 @@ if ! [[ "$TOTAL_USERS" =~ ^[0-9]+$ ]] || (( TOTAL_USERS < 2 || TOTAL_USERS > 500
   exit 1
 fi
 
-DB_USER="${SMOKE_AUTH_DB_USER:-${TEST_POSTGRES_USER:-${POSTGRES_USER:-boltorezka}}}"
-DB_NAME="${SMOKE_AUTH_DB_NAME:-${TEST_POSTGRES_DB:-${POSTGRES_DB:-boltorezka}}}"
+DB_USER="${SMOKE_AUTH_DB_USER:-${TEST_POSTGRES_USER:-${POSTGRES_USER:-datowave}}}"
+DB_NAME="${SMOKE_AUTH_DB_NAME:-${TEST_POSTGRES_DB:-${POSTGRES_DB:-datowave}}}"
 
 if [[ -z "$DB_USER" || -z "$DB_NAME" ]]; then
   echo "[smoke-auth-bootstrap] cannot resolve DB user/name (set SMOKE_AUTH_DB_USER and SMOKE_AUTH_DB_NAME)" >&2

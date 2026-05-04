@@ -72,12 +72,12 @@ async function establishSessionAndRoom(page) {
 
     const userId = String(me.payload.user.id || "").trim();
     if (userId) {
-      localStorage.setItem(`boltorezka_intro_v1_seen:${userId}`, "1");
+      localStorage.setItem(`datowave_intro_v1_seen:${userId}`, "1");
     }
 
-    sessionStorage.removeItem("boltorezka_update_reload_pending");
+    sessionStorage.removeItem("datowave_update_reload_pending");
 
-    localStorage.setItem("boltorezka_room_slug", slug);
+    localStorage.setItem("datowave_room_slug", slug);
     return { ok: true };
   }, { token: bearer, slug: roomSlug });
 
@@ -96,11 +96,11 @@ async function clickButton(page, selector, label) {
 async function readLocalState(page) {
   return page.evaluate(() => ({
     runtime: document.documentElement.dataset.runtime || "",
-    micMuted: localStorage.getItem("boltorezka_mic_muted"),
-    audioMuted: localStorage.getItem("boltorezka_audio_muted"),
-    selectedInputId: localStorage.getItem("boltorezka_selected_input_id") || "",
-    selectedOutputId: localStorage.getItem("boltorezka_selected_output_id") || "",
-    selectedVideoInputId: localStorage.getItem("boltorezka_selected_video_input_id") || ""
+    micMuted: localStorage.getItem("datowave_mic_muted"),
+    audioMuted: localStorage.getItem("datowave_audio_muted"),
+    selectedInputId: localStorage.getItem("datowave_selected_input_id") || "",
+    selectedOutputId: localStorage.getItem("datowave_selected_output_id") || "",
+    selectedVideoInputId: localStorage.getItem("datowave_selected_video_input_id") || ""
   }));
 }
 

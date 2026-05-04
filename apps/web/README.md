@@ -1,4 +1,4 @@
-# Web App (boltorezka)
+# Web App (datowave)
 
 Frontend package на `React + TypeScript + Vite`.
 

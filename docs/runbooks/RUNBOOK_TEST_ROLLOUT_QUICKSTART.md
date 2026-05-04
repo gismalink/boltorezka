@@ -28,30 +28,30 @@
 
 2) Деплой в test из нужного git ref (основной путь для Datowave):
 
-- `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test'`
+- `ssh mac-mini 'cd ~/srv/datowave && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test'`
 
 3) One-command deploy + post-deploy smoke (рекомендуется):
 
-- `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test:smoke'`
+- `ssh mac-mini 'cd ~/srv/datowave && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test:smoke'`
 
 Опционально: включить server-side desktop build+publish в тот же запуск:
 
-- `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 ENABLE_DESKTOP_BUILD=1 DESKTOP_CHANNEL=test DESKTOP_SIGNING_MODE=unsigned DESKTOP_PUBLIC_BASE_URL=https://test.datowave.com npm run deploy:test:smoke'`
+- `ssh mac-mini 'cd ~/srv/datowave && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 ENABLE_DESKTOP_BUILD=1 DESKTOP_CHANNEL=test DESKTOP_SIGNING_MODE=unsigned DESKTOP_PUBLIC_BASE_URL=https://test.datowave.com npm run deploy:test:smoke'`
 
 4) При необходимости повторить post-deploy smoke отдельно:
 
-- `ssh mac-mini 'cd ~/srv/boltorezka && npm run smoke:test:postdeploy'`
+- `ssh mac-mini 'cd ~/srv/datowave && npm run smoke:test:postdeploy'`
 
 Desktop update-feed gate (рекомендуется держать включенным в smoke):
 
-- `ssh mac-mini 'cd ~/srv/boltorezka && SMOKE_DESKTOP_UPDATE_FEED=1 SMOKE_DESKTOP_CHANNEL=test npm run smoke:test:postdeploy'`
-- expected summary fields в `~/srv/boltorezka/.deploy/last-smoke-summary.env`:
+- `ssh mac-mini 'cd ~/srv/datowave && SMOKE_DESKTOP_UPDATE_FEED=1 SMOKE_DESKTOP_CHANNEL=test npm run smoke:test:postdeploy'`
+- expected summary fields в `~/srv/datowave/.deploy/last-smoke-summary.env`:
   - `SMOKE_DESKTOP_UPDATE_FEED_STATUS=pass`
   - `SMOKE_SUMMARY_TEXT` содержит `desktop_update_feed=pass`
 
 5) Логи сервиса после rollout:
 
-- `ssh mac-mini 'cd ~/srv/boltorezka && docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host ps && docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host logs --tail=120 boltorezka-api-test'`
+- `ssh mac-mini 'cd ~/srv/datowave && docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host ps && docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host logs --tail=120 datowave-api-test'`
 
 ## Desktop auth handoff (deterministic) quick check
 
@@ -59,19 +59,19 @@ Desktop update-feed gate (рекомендуется держать включе
 
 1) Обновить smoke users/tokens на сервере:
 
-- `ssh mac-mini 'cd ~/srv/boltorezka && SMOKE_AUTH_COMPOSE_FILE=infra/docker-compose.host.yml SMOKE_AUTH_ENV_FILE=infra/.env.host SMOKE_AUTH_POSTGRES_SERVICE=boltorezka-db-test SMOKE_AUTH_API_SERVICE=boltorezka-api-test SMOKE_API_URL=https://test.datowave.com bash ./scripts/smoke/smoke-auth-bootstrap.sh'`
+- `ssh mac-mini 'cd ~/srv/datowave && SMOKE_AUTH_COMPOSE_FILE=infra/docker-compose.host.yml SMOKE_AUTH_ENV_FILE=infra/.env.host SMOKE_AUTH_POSTGRES_SERVICE=datowave-db-test SMOKE_AUTH_API_SERVICE=datowave-api-test SMOKE_API_URL=https://test.datowave.com bash ./scripts/smoke/smoke-auth-bootstrap.sh'`
 
 2) Запустить deterministic handoff smoke локально с токеном из серверного env:
 
-- `TOKEN="$(ssh mac-mini "cd ~/srv/boltorezka && set -a && source .deploy/smoke-auth.env && set +a && printf '%s' \"\$SMOKE_TEST_BEARER_TOKEN\"")" && SMOKE_TEST_BEARER_TOKEN="$TOKEN" SMOKE_API_URL=https://test.datowave.com npm run smoke:desktop:handoff-deterministic`
+- `TOKEN="$(ssh mac-mini "cd ~/srv/datowave && set -a && source .deploy/smoke-auth.env && set +a && printf '%s' \"\$SMOKE_TEST_BEARER_TOKEN\"")" && SMOKE_TEST_BEARER_TOKEN="$TOKEN" SMOKE_API_URL=https://test.datowave.com npm run smoke:desktop:handoff-deterministic`
 
 3) При необходимости soak на 20 последовательных циклов:
 
-- `TOKEN="$(ssh mac-mini "cd ~/srv/boltorezka && set -a && source .deploy/smoke-auth.env && set +a && printf '%s' \"\$SMOKE_TEST_BEARER_TOKEN\"")" && SMOKE_TEST_BEARER_TOKEN="$TOKEN" SMOKE_API_URL=https://test.datowave.com SMOKE_DESKTOP_HANDOFF_SOAK_CYCLES=20 npm run smoke:desktop:handoff:soak`
+- `TOKEN="$(ssh mac-mini "cd ~/srv/datowave && set -a && source .deploy/smoke-auth.env && set +a && printf '%s' \"\$SMOKE_TEST_BEARER_TOKEN\"")" && SMOKE_TEST_BEARER_TOKEN="$TOKEN" SMOKE_API_URL=https://test.datowave.com SMOKE_DESKTOP_HANDOFF_SOAK_CYCLES=20 npm run smoke:desktop:handoff:soak`
 
 4) Browser-level soak на трех движках (Chromium/WebKit/Firefox):
 
-- `TOKEN="$(ssh mac-mini "cd ~/srv/boltorezka && set -a && source .deploy/smoke-auth.env && set +a && printf '%s' \"\$SMOKE_TEST_BEARER_TOKEN\"")" && SMOKE_TEST_BEARER_TOKEN="$TOKEN" SMOKE_API_URL=https://test.datowave.com SMOKE_DESKTOP_HANDOFF_BROWSER_SOAK_CYCLES=20 npm run smoke:desktop:handoff:browser-soak`
+- `TOKEN="$(ssh mac-mini "cd ~/srv/datowave && set -a && source .deploy/smoke-auth.env && set +a && printf '%s' \"\$SMOKE_TEST_BEARER_TOKEN\"")" && SMOKE_TEST_BEARER_TOKEN="$TOKEN" SMOKE_API_URL=https://test.datowave.com SMOKE_DESKTOP_HANDOFF_BROWSER_SOAK_CYCLES=20 npm run smoke:desktop:handoff:browser-soak`
 
 Ожидаемый PASS:
 
@@ -106,11 +106,11 @@ Desktop update-feed gate (рекомендуется держать включе
 
 Скрипт выполняет:
 
-1. `deploy:test` (recreate `boltorezka-api-test`),
+1. `deploy:test` (recreate `datowave-api-test`),
 2. `postdeploy` smoke (`/health`, `/v1/auth/mode`, `smoke:sso`, `smoke:realtime`),
 3. snapshot realtime метрик из Redis (`ws:metrics:<date>`).
 
-> Если у тебя в compose/скриптах другое имя сервиса — замени `boltorezka-api-test` на фактическое.
+> Если у тебя в compose/скриптах другое имя сервиса — замени `datowave-api-test` на фактическое.
 
 ## 5 URL/check проверок
 
@@ -156,15 +156,15 @@ Desktop update-feed gate (рекомендуется держать включе
 
 Где хранится список пользователей на сервере:
 
-- Источник истины: PostgreSQL таблица `users` в test БД (`boltorezka-db-test` через `infra/docker-compose.host.yml` + `infra/.env.host`).
+- Источник истины: PostgreSQL таблица `users` в test БД (`datowave-db-test` через `infra/docker-compose.host.yml` + `infra/.env.host`).
 - Быстрый просмотр на сервере:
-  - `ssh mac-mini 'cd ~/srv/boltorezka && docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host exec -T boltorezka-db-test psql -U "$TEST_POSTGRES_USER" -d "$TEST_POSTGRES_DB" -c "select id, email, role, created_at from users order by created_at desc limit 50;"'`
+  - `ssh mac-mini 'cd ~/srv/datowave && docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host exec -T datowave-db-test psql -U "$TEST_POSTGRES_USER" -d "$TEST_POSTGRES_DB" -c "select id, email, role, created_at from users order by created_at desc limit 50;"'`
 
 Где хранится ссылка на bootstrap-токены:
 
-- Локальный env-файл на сервере после bootstrap: `~/srv/boltorezka/.deploy/smoke-auth.env`
+- Локальный env-файл на сервере после bootstrap: `~/srv/datowave/.deploy/smoke-auth.env`
 - Команда bootstrap для 3-way smoke (создаёт 3-го пользователя и token):
-  - `ssh mac-mini 'cd ~/srv/boltorezka && SMOKE_AUTH_COMPOSE_FILE=infra/docker-compose.host.yml SMOKE_AUTH_ENV_FILE=infra/.env.host SMOKE_AUTH_POSTGRES_SERVICE=boltorezka-db-test SMOKE_AUTH_API_SERVICE=boltorezka-api-test SMOKE_API_URL=https://test.datowave.com SMOKE_AUTH_USER3_EMAIL=smoke-rtc-3@example.test bash ./scripts/smoke/smoke-auth-bootstrap.sh'`
+  - `ssh mac-mini 'cd ~/srv/datowave && SMOKE_AUTH_COMPOSE_FILE=infra/docker-compose.host.yml SMOKE_AUTH_ENV_FILE=infra/.env.host SMOKE_AUTH_POSTGRES_SERVICE=datowave-db-test SMOKE_AUTH_API_SERVICE=datowave-api-test SMOKE_API_URL=https://test.datowave.com SMOKE_AUTH_USER3_EMAIL=smoke-rtc-3@example.test bash ./scripts/smoke/smoke-auth-bootstrap.sh'`
 
 ## Rollback trigger
 
@@ -174,12 +174,12 @@ Desktop update-feed gate (рекомендуется держать включе
 - SSO flow не возвращает пользователя,
 - нельзя войти в комнату,
 - чат не доставляет сообщения в realtime,
-- в логах `boltorezka-api-test` повторяющиеся критичные ошибки.
+- в логах `datowave-api-test` повторяющиеся критичные ошибки.
 
 Rollback команда:
 
-- `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=<previous_sha_or_ref> npm run deploy:test'`
-- или с автополитикой rollback: `ssh mac-mini 'cd ~/srv/boltorezka && AUTO_ROLLBACK_ON_FAIL=1 AUTO_ROLLBACK_SMOKE=1 TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test:smoke'`
+- `ssh mac-mini 'cd ~/srv/datowave && TEST_REF=<previous_sha_or_ref> npm run deploy:test'`
+- или с автополитикой rollback: `ssh mac-mini 'cd ~/srv/datowave && AUTO_ROLLBACK_ON_FAIL=1 AUTO_ROLLBACK_SMOKE=1 TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test:smoke'`
 
 ## Audit notes (обязательно)
 

@@ -61,8 +61,8 @@ This folder contains operational scripts grouped by purpose.
   - `npm run livekit:test:up`
   - `npm run livekit:test:check`
 
- Публикация desktop артефактов в edge static web-root (`ingress/static/boltorezka/<channel>/desktop/<channel>/<sha>/...`) + генерация `latest.json`
- - Для electron-updater дополнительно формируется `ingress/static/boltorezka/<channel>/desktop/<channel>/mac/latest-mac.yml` и копируются `*-mac.zip` + `*.blockmap`.
+ Публикация desktop артефактов в edge static web-root (`ingress/static/datowave/<channel>/desktop/<channel>/<sha>/...`) + генерация `latest.json`
+ - Для electron-updater дополнительно формируется `ingress/static/datowave/<channel>/desktop/<channel>/mac/latest-mac.yml` и копируются `*-mac.zip` + `*.blockmap`.
 
 - Keep test-first: use `deploy:test:smoke` before any prod rollout.
   - `npm run scheduler:run -- backup-postgres-all`

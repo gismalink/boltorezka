@@ -1323,7 +1323,7 @@ export class WsMessageController {
       case "dm.reaction.changed":
       case "dm.thread.read":
         window.dispatchEvent(
-          new CustomEvent("boltorezka:dm", {
+          new CustomEvent("datowave:dm", {
             detail: { type: message.type, payload: message.payload }
           })
         );

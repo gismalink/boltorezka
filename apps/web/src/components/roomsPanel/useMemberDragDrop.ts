@@ -11,14 +11,14 @@ type MemberDragPayload = { userId: string; userName: string; fromRoomSlug: strin
 
 function hasMemberDragPayload(event: DragEvent): boolean {
   const types = Array.from(event.dataTransfer.types || []);
-  return types.includes("application/x-boltorezka-member")
-    || types.includes("application/x-boltorezka-member-from-room")
+  return types.includes("application/x-datowave-member")
+    || types.includes("application/x-datowave-member-from-room")
     || types.includes("text/plain");
 }
 
 function resolveMemberDragPayload(event: DragEvent): MemberDragPayload | null {
   const payload =
-    event.dataTransfer.getData("application/x-boltorezka-member")
+    event.dataTransfer.getData("application/x-datowave-member")
     || event.dataTransfer.getData("text/plain");
   if (!payload) {
     return null;
@@ -39,11 +39,11 @@ function resolveMemberDragPayload(event: DragEvent): MemberDragPayload | null {
 }
 
 function resolveDragSourceRoom(event: DragEvent): string {
-  const directRoomSlug = event.dataTransfer.getData("application/x-boltorezka-member-from-room");
+  const directRoomSlug = event.dataTransfer.getData("application/x-datowave-member-from-room");
   if (directRoomSlug) {
     return directRoomSlug;
   }
-  const payload = event.dataTransfer.getData("application/x-boltorezka-member");
+  const payload = event.dataTransfer.getData("application/x-datowave-member");
   if (!payload) {
     return "";
   }
@@ -80,10 +80,10 @@ export function useMemberDragDrop({
       userName,
       fromRoomSlug: room.slug
     });
-    event.dataTransfer.setData("application/x-boltorezka-member", payload);
+    event.dataTransfer.setData("application/x-datowave-member", payload);
     // Safari may ignore custom MIME types during dragover, keep plain-text fallback.
     event.dataTransfer.setData("text/plain", payload);
-    event.dataTransfer.setData("application/x-boltorezka-member-from-room", room.slug);
+    event.dataTransfer.setData("application/x-datowave-member-from-room", room.slug);
     event.dataTransfer.effectAllowed = "move";
   };
 

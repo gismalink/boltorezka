@@ -1,7 +1,7 @@
 # План: перенос продукта на новый домен (domain cutover)
 Status: Completed (domain cutover closure + legacy cleanup, archived 2026-03-27)
 Date: 2026-03-22
-Scope: перенести только boltorezka-контур с `boltorezka.gismalink.art` (и связанных test/auth host в рамках boltorezka) на `datowave.com` через greenfield rollout: поднимаем новый контур, делаем redirect со старых адресов на новые, старый контур boltorezka выключаем после окна совместимости.
+Scope: перенести только datowave-контур с `datowave.com` (и связанных test/auth host в рамках datowave) на `datowave.com` через greenfield rollout: поднимаем новый контур, делаем redirect со старых адресов на новые, старый контур datowave выключаем после окна совместимости.
 
 ## 0) Цели и ограничения
 
@@ -41,7 +41,7 @@ Scope: перенести только boltorezka-контур с `boltorezka.gi
 
 - [x] Зарегистрировать и подтвердить новый домен `datowave.com`.
 - [x] Применить подтвержденные DNS A-записи для `datowave.com` (см. раздел 10.3). Проверено `dig +short A` 2026-03-24.
-- [x] Подтверждено (scope boltorezka): требуемые service-host покрыты и добавлены в DNS (`datowave.com`, `test.datowave.com`, `auth.datowave.com`, `test.auth.datowave.com`).
+- [x] Подтверждено (scope datowave): требуемые service-host покрыты и добавлены в DNS (`datowave.com`, `test.datowave.com`, `auth.datowave.com`, `test.auth.datowave.com`).
 - [x] Выпустить TLS-сертификаты для нового домена и нужных поддоменов в `test` (`test.datowave.com`, `test.auth.datowave.com`); `prod` host pending.
 - [x] Обновить ingress-конфиги (Caddy/Nginx) под новый host в `test`.
 - [x] Настроить redirect `301/308` со старого домена на новый (без redirect-loop) в `test`.
@@ -49,16 +49,16 @@ Scope: перенести только boltorezka-контур с `boltorezka.gi
 
 Статус на 2026-03-24:
 - DNS A-записи на `datowave.com` и связанные host уже применены и проверены.
-- Ingress/Caddy еще не переключен на новые host (в конфиге пока `boltorezka.gismalink.art` и `test.boltorezka.gismalink.art`).
+- Ingress/Caddy еще не переключен на новые host (в конфиге пока `datowave.com` и `test.datowave.com`).
 - Host env переменные приложения пока указывают на старые домены (`CORS_ORIGIN`, `AUTH_SSO_BASE_URL`, `ALLOWED_RETURN_HOSTS`, cookie domain).
 
 Статус на 2026-03-25 (`test`):
 - `test.datowave.com` и `test.auth.datowave.com` обслуживаются по TLS, health-check проходит.
-- `test.auth.datowave.com` изолирован в стеке boltorezka (`boltorezka-auth-test-datowave` + отдельная test DB).
+- `test.auth.datowave.com` изолирован в стеке datowave (`datowave-auth-test-datowave` + отдельная test DB).
 - Исправлен OAuth redirect для `test`: API больше не возвращает `test.auth.gismalink.art`, используется `test.auth.datowave.com`.
-- Redirect `test.boltorezka.gismalink.art` -> `test.datowave.com` отдает `308` и сохраняет query string.
+- Redirect `test.datowave.com` -> `test.datowave.com` отдает `308` и сохраняет query string.
 - Добавлен redirect-only домен `test.datute.ru` -> `test.datowave.com` (`308`, path/query сохраняются).
-- Перепроверка DNS от 2026-03-25: в scope этого плана (`boltorezka` cutover) требуемые host подтверждены; `popn`, `projo` и остальные отдельные проекты не входят в этот перенос.
+- Перепроверка DNS от 2026-03-25: в scope этого плана (`datowave` cutover) требуемые host подтверждены; `popn`, `projo` и остальные отдельные проекты не входят в этот перенос.
 - HTTPS policy (test): `http://test.datowave.com` и `http://test.auth.datowave.com` принудительно редиректят на HTTPS (`308`).
 - HSTS policy (test): `Strict-Transport-Security: max-age=31536000; includeSubDomains` подтвержден на `test.datowave.com` и `test.auth.datowave.com` после перезапуска ingress (`docker compose up -d --force-recreate edge-caddy`).
 
@@ -113,20 +113,20 @@ Draft: Authentik OIDC URI/logout matrix (v1 cutover)
   - Redirect URI: `https://auth.datowave.com/auth/callback`
   - Post logout redirect URI: `https://datowave.com/`
 - Desktop (`test`):
-  - Redirect URI: `boltorezka://auth/callback`
+  - Redirect URI: `datowave://auth/callback`
   - Post logout redirect URI: `https://test.datowave.com/desktop/logout-complete`
 - Desktop (`prod`):
-  - Redirect URI: `boltorezka://auth/callback`
+  - Redirect URI: `datowave://auth/callback`
   - Post logout redirect URI: `https://datowave.com/desktop/logout-complete`
 
 Draft: Authentik OIDC clients and claims mapping (v1)
-- Client `boltorezka-web`:
+- Client `datowave-web`:
   - Grant types: Authorization Code + PKCE.
   - Redirect URIs: web matrix выше (`test`/`prod`).
   - Scopes: `openid profile email offline_access`.
-- Client `boltorezka-desktop`:
+- Client `datowave-desktop`:
   - Grant types: Authorization Code + PKCE.
-  - Redirect URIs: `boltorezka://auth/callback`.
+  - Redirect URIs: `datowave://auth/callback`.
   - Scopes: `openid profile email offline_access`.
 - Required claims in ID/access token for backend mapping:
   - `sub` (stable user id), `email`, `email_verified`, `preferred_username`, `name`.
@@ -154,7 +154,7 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 
 Статус на 2026-03-27 (`test`):
 - В web user-facing UI выполнен ребренд на `Dato` (title, onboarding/welcome, desktop handoff gate, error fallback).
-- После test deploy (`SHA 28c84a4`) в текущем frontend bundle подтверждены brand-строки `Dato`; `Boltorezka` в web user-facing bundle не обнаружен.
+- После test deploy (`SHA 28c84a4`) в текущем frontend bundle подтверждены brand-строки `Dato`; `Datowave` в web user-facing bundle не обнаружен.
 - В web-коде отсутствуют user-facing упоминания `gismalink.art` (проверено поиском по `apps/web/src` + `apps/web/index.html`).
 
 ### 3.5 Операционка и документация
@@ -196,9 +196,9 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 
 ### 3.7 Redirect-карта старых адресов на новые
 
-- [x] Зафиксировать явную таблицу соответствий host/path по правилу: заменить только суффикс `boltotrezka.gismalink.art` на `datowave.com` (см. раздел 10.2).
+- [x] Зафиксировать явную таблицу соответствий host/path по правилу: заменить только суффикс `legacy-project-domain` на `datowave.com` (см. раздел 10.2).
 - [x] Не создавать новые поддомены при переезде: переносить только те host-ы, которые уже существуют в старом контуре (правило зафиксировано в разделе 10.2).
-- [x] Настроить redirect `301/308` на уровне ingress без redirect-loop (`test`: подтверждено для `test.boltorezka.gismalink.art` и `test.datute.ru`).
+- [x] Настроить redirect `301/308` на уровне ingress без redirect-loop (`test`: подтверждено для `test.datowave.com` и `test.datute.ru`).
 - [x] Проверить сохранение пути и query params при redirect (`test`: подтверждено `npm run smoke:redirect-map`, 2026-03-26).
 - [x] Настроить redirect для auth-роутов (где это безопасно): принудительный redirect со старого auth-host не включаем по политике dual-host.
 - [x] Для auth-host в окно совместимости использовать dual-host (без принудительного redirect со старого auth-домена) — подтверждено в `test` (2026-03-26).
@@ -207,7 +207,7 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 Статус на 2026-03-26 (`test`):
 - Добавлен redirect-map smoke: `scripts/smoke/smoke-domain-redirect-map.mjs` + npm команда `smoke:redirect-map`.
 - Добавлена поддержка scope для redirect smoke: `test` (default) и `prod` (`SMOKE_REDIRECT_SCOPE=prod`).
-- Подтверждено выполнение redirect smoke в `test`: `test.boltorezka.gismalink.art -> test.datowave.com` и `test.datute.ru -> test.datowave.com` (`308`, path/query сохранены).
+- Подтверждено выполнение redirect smoke в `test`: `test.datowave.com -> test.datowave.com` и `test.datute.ru -> test.datowave.com` (`308`, path/query сохранены).
 - Подтвержден dual-host auth в `test`: `test.auth.datowave.com` и `test.auth.gismalink.art` обслуживаются параллельно, оба отдают `302` на Google OAuth без принудительного редиректа старого auth-host.
 
 ## 4) Decision memo: Keycloak vs Authentik
@@ -260,7 +260,7 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 Статус Stage 2 на 2026-03-27:
 - Выполнен rollout через GitOps из `main` в `edge` (SHA `50ba845`, 2026-03-27).
 - `https://datowave.com/` отвечает `200`; `https://www.datowave.com/` редиректит `308` на `https://datowave.com/`.
-- `https://boltorezka.gismalink.art/` переведен в redirect-only (`308` на `https://datowave.com{uri}` с сохранением path/query).
+- `https://datowave.com/` переведен в redirect-only (`308` на `https://datowave.com{uri}` с сохранением path/query).
 - Auth dual-host в `prod` подтвержден: `auth.datowave.com` и `auth.gismalink.art` отдают `302` на Google OAuth.
 - OAuth-only коммуникация: сообщение/playbook готовы, фактическая массовая рассылка остается отдельным шагом владельца релиза.
 - Решение владельца релиза от 2026-03-27: отдельная почтовая рассылка не требуется, коммуникация со старыми пользователями проведена напрямую.
@@ -284,7 +284,7 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 - [x] Login/logout для новых и re-onboarded пользователей (`test`: вход через Google/Yandex подтвержден).
 - [x] Проверка redirect со старых адресов на новые и отсутствие циклов (`test`: `smoke:redirect-map` PASS, 2026-03-26).
 - [x] Проверка сохранения path и query params при redirect (`test`: `smoke:redirect-map` PASS, 2026-03-26).
-- [x] Проверка redirect-only поведения на старом домене (`test`: `test.boltorezka.gismalink.art` и `test.datute.ru` -> `test.datowave.com`, `308`).
+- [x] Проверка redirect-only поведения на старом домене (`test`: `test.datowave.com` и `test.datute.ru` -> `test.datowave.com`, `308`).
 
 ## 7) Rollback
 
@@ -313,7 +313,7 @@ Rollback-планирование в рамках этого документа 
 4. Email auth/register/reset/verify вынесены в отдельный план: `docs/plans/2026-03-26_EMAIL_AUTH_TRACK.md`.
 5. Подтверждено: стратегия IdP для v1 = Вариант B (Authentik), внедрение через `test` с отдельным smoke перед `prod`.
 6. Подтверждено: для старого домена используется только redirect-only политика.
-7. Финальная redirect-карта для ключевых адресов (включая `service.boltotrezka.gismalink.art` -> `service.datowave.com` и `test.service.boltotrezka.gismalink.art` -> `test.service.datowave.com`).
+7. Финальная redirect-карта для ключевых адресов (включая `service.legacy-project-domain` -> `service.datowave.com` и `test.service.legacy-project-domain` -> `test.service.datowave.com`).
 8. Подтверждено: auth-host в старом контуре присутствует и работает в режиме dual-host без обязательного redirect (`auth.*`, `test.auth.*`).
 
 ## 10) Подтвержденная схема адресов и redirect (v1)
@@ -326,16 +326,16 @@ Rollback-планирование в рамках этого документа 
 
 ### 10.2 Redirect-карта старых адресов
 
-- `https://boltotrezka.gismalink.art` -> `https://datowave.com`.
-- `https://test.service.boltotrezka.gismalink.art` -> `https://test.service.datowave.com`.
-- `https://auth.boltotrezka.gismalink.art` -> `https://auth.datowave.com`.
-- `https://test.auth.boltotrezka.gismalink.art` -> `https://test.auth.datowave.com`.
+- `https://legacy-project-domain` -> `https://datowave.com`.
+- `https://test.service.legacy-project-domain` -> `https://test.service.datowave.com`.
+- `https://auth.legacy-project-domain` -> `https://auth.datowave.com`.
+- `https://test.auth.legacy-project-domain` -> `https://test.auth.datowave.com`.
 - Для auth-host в период совместимости: старый и новый host должны обслуживаться параллельно (без обязательного redirect), чтобы не сломать внешние зависимости старых проектов.
 - Если API исторически не был отдельным host (работал path-based), не добавлять `api.datowave.com` и оставить ту же path-схему на новом домене.
 
 Единое правило переезда host:
-- для любого host вида `<prefix>.boltotrezka.gismalink.art` целевой host = `<prefix>.datowave.com`;
-- для корневого host `boltotrezka.gismalink.art` целевой host = `datowave.com`.
+- для любого host вида `<prefix>.legacy-project-domain` целевой host = `<prefix>.datowave.com`;
+- для корневого host `legacy-project-domain` целевой host = `datowave.com`.
 
 Правило redirect:
 - сохранять path и query params;

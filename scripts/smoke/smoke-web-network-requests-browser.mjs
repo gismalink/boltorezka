@@ -94,9 +94,9 @@ async function main() {
 
   try {
     await page.addInitScript((token) => {
-      localStorage.setItem("boltorezka_lang", "en");
+      localStorage.setItem("datowave_lang", "en");
       if (token) {
-        localStorage.setItem("boltorezka_token", token);
+        localStorage.setItem("datowave_token", token);
       }
     }, bearerToken);
 

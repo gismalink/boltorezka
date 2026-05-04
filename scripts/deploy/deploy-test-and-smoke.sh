@@ -4,7 +4,7 @@ set -euo pipefail
 
 if [[ $# -lt 1 ]]; then
   echo "Usage: $0 <git-ref> [repo-dir]" >&2
-  echo "Example: $0 origin/feature/realtime-hardening ~/boltorezka" >&2
+  echo "Example: $0 origin/feature/realtime-hardening ~/datowave" >&2
   exit 1
 fi
 
@@ -110,7 +110,7 @@ if [[ "$SMOKE_STATUS" == "fail" && "$AUTO_ROLLBACK_ON_FAIL" == "1" && -n "$PREV_
     "$ROLLBACK_NOTES" >>"$LOCAL_RELEASE_LOG"
 
   if [[ -x "$EDGE_RELEASE_LOG_SCRIPT" ]]; then
-    bash "$EDGE_RELEASE_LOG_SCRIPT" rollback test "$ROLLBACK_SMOKE_STATUS" "boltorezka rollback target=$PREV_DEPLOY_SHA; triggered_by=deploy:test:smoke-fail" || true
+    bash "$EDGE_RELEASE_LOG_SCRIPT" rollback test "$ROLLBACK_SMOKE_STATUS" "datowave rollback target=$PREV_DEPLOY_SHA; triggered_by=deploy:test:smoke-fail" || true
   fi
 
   if [[ "$AUTO_ROLLBACK_SMOKE" == "1" ]]; then
@@ -162,7 +162,7 @@ printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
   "$ESCAPED_NOTES" >>"$LOCAL_RELEASE_LOG"
 
 if [[ -x "$EDGE_RELEASE_LOG_SCRIPT" ]]; then
-  EDGE_NOTES="boltorezka ref=$GIT_REF sha=$SHA"
+  EDGE_NOTES="datowave ref=$GIT_REF sha=$SHA"
   if [[ -n "$FINAL_NOTES" ]]; then
     EDGE_NOTES="$EDGE_NOTES; $FINAL_NOTES"
   fi

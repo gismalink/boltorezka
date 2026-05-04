@@ -20,14 +20,14 @@ Purpose: rotate static TURN credentials on host env by schedule and keep an audi
 Dry-run (default, no write):
 
 ```bash
-cd ~/srv/boltorezka
+cd ~/srv/datowave
 npm run turn:rotate
 ```
 
 Apply rotation:
 
 ```bash
-cd ~/srv/boltorezka
+cd ~/srv/datowave
 TURN_ROTATE_APPLY=1 npm run turn:rotate
 ```
 
@@ -38,14 +38,14 @@ TURN_ROTATE_APPLY=1 npm run turn:rotate
 - Install/update launchd job:
 
 ```bash
-cd ~/srv/boltorezka
+cd ~/srv/datowave
 bash ./scripts/ops/scheduler/install-launchd-job.sh turn-credentials-rotate
 ```
 
 Verify launchd registration:
 
 ```bash
-launchctl print "gui/$(id -u)/com.boltorezka.scheduler.turn-credentials-rotate" | sed -n '1,80p'
+launchctl print "gui/$(id -u)/com.datowave.scheduler.turn-credentials-rotate" | sed -n '1,80p'
 ```
 
 ## Metadata and Audit

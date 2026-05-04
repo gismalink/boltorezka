@@ -1478,7 +1478,7 @@ const TEXT_BASE: Record<Lang, Record<string, string>> = {
 export const TEXT = TEXT_BASE;
 
 export function detectInitialLang(): Lang {
-  const saved = localStorage.getItem("boltorezka_lang");
+  const saved = localStorage.getItem("datowave_lang");
   if (saved === "ru" || saved === "en") {
     return saved;
   }

@@ -71,7 +71,7 @@ export function useChatPanelInboxNotifications({
 
   useEffect(() => {
     try {
-      const raw = window.localStorage.getItem("boltorezka:notified-inbox-events");
+      const raw = window.localStorage.getItem("datowave:notified-inbox-events");
       if (!raw) {
         return;
       }
@@ -194,7 +194,7 @@ export function useChatPanelInboxNotifications({
   const persistNotifiedInboxEvents = useCallback(() => {
     try {
       const snapshot = Array.from(notifiedInboxEventIdsRef.current).slice(-200);
-      window.localStorage.setItem("boltorezka:notified-inbox-events", JSON.stringify(snapshot));
+      window.localStorage.setItem("datowave:notified-inbox-events", JSON.stringify(snapshot));
     } catch {
       // Persisting notification dedupe state is best-effort.
     }

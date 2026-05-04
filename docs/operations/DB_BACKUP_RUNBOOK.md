@@ -5,24 +5,25 @@
 ## 1) Что бэкапим
 
 Скрипт делает `pg_dumpall` для обоих контуров:
-- `boltorezka-db-test`
-- `boltorezka-db-prod`
+- `datowave-db-test`
+- `datowave-db-prod`
 
 Это включает все базы в каждом Postgres-кластере, роли и глобальные объекты.
 
 ## 2) Где лежат бэкапы
 
 По умолчанию:
-- `~/srv/backups/boltorezka/postgres/test`
-- `~/srv/backups/boltorezka/postgres/prod`
+- `~/srv/backups/datowave/postgres/test`
+- `~/srv/backups/datowave/postgres/prod`
 
 Файлы:
 - `<UTC_TIMESTAMP>_pgdumpall.sql.gz`
 - `<UTC_TIMESTAMP>_pgdumpall.sql.gz.sha256`
+- Временный файл: `<UTC_TIMESTAMP>_pgdumpall.sql.gz.tmp` (удаляется автоматически при успехе; устаревшие `.tmp` чистятся по `TMP_RETENTION_DAYS`).
 
 ## 3) Ручной запуск
 
-Из репозитория `~/srv/boltorezka` на сервере:
+Из репозитория `~/srv/datowave` на сервере:
 
 ```bash
 bash ./scripts/ops/backup-postgres-all.sh
@@ -38,15 +39,18 @@ npm run backup:db:all
 
 - `BACKUP_ROOT` - корневая папка бэкапов.
 - `RETENTION_DAYS` - срок хранения в днях (default: `14`).
+- `TMP_RETENTION_DAYS` - срок хранения временных `.tmp` файлов (default: `2`).
 - `BACKUP_COMPOSE_FILE` - compose файл (default: `infra/docker-compose.host.yml`).
 - `BACKUP_ENV_FILE` - env файл (default: `infra/.env.host`).
 - `BACKUP_TEST_DB_SERVICE` - имя test Postgres service.
 - `BACKUP_PROD_DB_SERVICE` - имя prod Postgres service.
+- `BACKUP_TEST_DB_USER` - пользователь для `pg_dumpall` test (default: `datowave_test`).
+- `BACKUP_PROD_DB_USER` - пользователь для `pg_dumpall` prod (default: `datowave_prod`).
 
 Пример:
 
 ```bash
-BACKUP_ROOT=/Users/davidshvartsman/backups/boltorezka RETENTION_DAYS=21 bash ./scripts/ops/backup-postgres-all.sh
+BACKUP_ROOT=/Users/davidshvartsman/backups/datowave RETENTION_DAYS=21 bash ./scripts/ops/backup-postgres-all.sh
 ```
 
 ## 5) Планировщик (рекомендация)
@@ -56,7 +60,7 @@ BACKUP_ROOT=/Users/davidshvartsman/backups/boltorezka RETENTION_DAYS=21 bash ./s
 Предпочтительно через единый scheduler interface:
 
 ```bash
-cd ~/srv/boltorezka
+cd ~/srv/datowave
 bash ./scripts/ops/scheduler/install-launchd-job.sh backup-postgres-all
 ```
 
@@ -64,12 +68,12 @@ Source-of-truth для расписания/команды:
 - `scripts/ops/scheduler/jobs/backup-postgres-all.env`
 
 Централизованные execution-логи scheduler:
-- `~/srv/boltorezka/.deploy/scheduler/executions.ndjson`
+- `~/srv/datowave/.deploy/scheduler/executions.ndjson`
 
 Пример cron (если используется):
 
 ```cron
-20 3 * * * cd /Users/davidshvartsman/srv/boltorezka && /bin/bash ./scripts/ops/backup-postgres-all.sh >> /Users/davidshvartsman/srv/backups/boltorezka/backup.log 2>&1
+20 3 * * * cd /Users/davidshvartsman/srv/datowave && /bin/bash ./scripts/ops/backup-postgres-all.sh >> /Users/davidshvartsman/srv/backups/datowave/backup.log 2>&1
 ```
 
 ## 6) Проверка восстановления

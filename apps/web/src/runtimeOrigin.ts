@@ -7,7 +7,7 @@ function isDesktopFileRuntime(): boolean {
   if (typeof window === "undefined") {
     return false;
   }
-  return Boolean(window.boltorezkaDesktop) && window.location.protocol === "file:";
+  return Boolean(window.datowaveDesktop) && window.location.protocol === "file:";
 }
 
 function resolveFallbackDesktopOrigin(): string {

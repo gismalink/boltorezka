@@ -8,9 +8,9 @@ ENV_FILE="${SMOKE_ENV_FILE:-infra/.env.host}"
 SMOKE_ENV_SCOPE="${SMOKE_ENV_SCOPE:-test}"
 
 if [[ "$SMOKE_ENV_SCOPE" == "prod" ]]; then
-  POSTGRES_SERVICE="${SMOKE_POSTGRES_SERVICE:-boltorezka-db-prod}"
+  POSTGRES_SERVICE="${SMOKE_POSTGRES_SERVICE:-datowave-db-prod}"
 else
-  POSTGRES_SERVICE="${SMOKE_POSTGRES_SERVICE:-boltorezka-db-test}"
+  POSTGRES_SERVICE="${SMOKE_POSTGRES_SERVICE:-datowave-db-test}"
 fi
 
 read_env_value() {

@@ -129,11 +129,11 @@ async function main() {
     });
 
     await page.addInitScript((presetToken) => {
-      localStorage.setItem("boltorezka_lang", "en");
+      localStorage.setItem("datowave_lang", "en");
       if (presetToken) {
-        localStorage.setItem("boltorezka_token", presetToken);
+        localStorage.setItem("datowave_token", presetToken);
       } else {
-        localStorage.removeItem("boltorezka_token");
+        localStorage.removeItem("datowave_token");
       }
     }, token);
 

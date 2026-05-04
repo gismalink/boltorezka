@@ -4,8 +4,8 @@
  * Назначение:
  * - Рендерится из `main.tsx`, когда URL совпадает с `/privacy`, `/terms`, `/cookies`, `/contacts`.
  * - Сама управляет языком (RU/EN) и cookie-баннером, не требуя авторизации/реалтайма.
- * - Хранит локально согласие на cookies (`boltorezka_cookie_consent_v1`) и приём правовых
- *   документов (`boltorezka_legal_acceptance_v1`) через localStorage.
+ * - Хранит локально согласие на cookies (`datowave_cookie_consent_v1`) и приём правовых
+ *   документов (`datowave_legal_acceptance_v1`) через localStorage.
  *
  * Контент захардкожен в `LEGAL_PAGES` (RU/EN) — обновлять вместе с правовой версией.
  */
@@ -16,8 +16,8 @@ import { Button, PixelCheckbox } from "./components/uicomponents";
 import { detectInitialLang, LANGUAGE_OPTIONS, type Lang } from "./i18n";
 import { normalizeUiTheme } from "./utils/appShell";
 
-const COOKIE_CONSENT_KEY = "boltorezka_cookie_consent_v1";
-const LEGAL_ACCEPTANCE_KEY = "boltorezka_legal_acceptance_v1";
+const COOKIE_CONSENT_KEY = "datowave_cookie_consent_v1";
+const LEGAL_ACCEPTANCE_KEY = "datowave_legal_acceptance_v1";
 
 type LegalPageData = {
   title: string;
@@ -256,7 +256,7 @@ export function LegalStandalonePage() {
       : null;
   const isCookiesPage = normalizedPathname === "/cookies";
   const [lang, setLang] = useState<Lang>(() => detectInitialLang());
-  const [selectedUiTheme] = useState(() => normalizeUiTheme(localStorage.getItem("boltorezka_ui_theme")));
+  const [selectedUiTheme] = useState(() => normalizeUiTheme(localStorage.getItem("datowave_ui_theme")));
   const [cookieConsentAccepted, setCookieConsentAccepted] = useState<boolean>(() => {
     return localStorage.getItem(COOKIE_CONSENT_KEY) === "1";
   });
@@ -291,7 +291,7 @@ export function LegalStandalonePage() {
   }, [lang, pathname]);
 
   useEffect(() => {
-    localStorage.setItem("boltorezka_lang", lang);
+    localStorage.setItem("datowave_lang", lang);
     document.documentElement.lang = lang;
   }, [lang]);
 

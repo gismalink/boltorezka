@@ -61,7 +61,7 @@ function makeRequest(method, url, options = {}) {
     const isHttps = urlObj.protocol === 'https:';
     const client = isHttps ? https : http;
     const headers = {
-      'User-Agent': 'boltorezka-smoke/1.0',
+      'User-Agent': 'datowave-smoke/1.0',
       ...options.headers,
     };
     if (options.cookie) {

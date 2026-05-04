@@ -6,7 +6,7 @@ Status: Completed (design+implementation evidence closed, archived 2026-03-21)
 
 ## 1) Проблема
 
-Текущий flow использует таймер после `window.location.href = boltorezka://...`:
+Текущий flow использует таймер после `window.location.href = datowave://...`:
 - если таймер слишком короткий, браузерный redirect может перебить deep-link;
 - если слишком длинный, пользователь видит лишнюю паузу;
 - поведение зависит от платформы/браузера/настроек OS.
@@ -26,7 +26,7 @@ Status: Completed (design+implementation evidence closed, archived 2026-03-21)
 
 Схема:
 1. Browser получает `desktop_handoff_code`.
-2. Browser открывает `boltorezka://...&attemptId=<id>`.
+2. Browser открывает `datowave://...&attemptId=<id>`.
 3. Electron принимает deep-link и вызывает backend `/v1/auth/desktop-handoff/exchange`.
 4. После успешного exchange Electron отправляет browser-ack на backend:
    - `POST /v1/auth/desktop-handoff/complete` с `attemptId`.

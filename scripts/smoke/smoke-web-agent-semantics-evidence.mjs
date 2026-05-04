@@ -93,8 +93,8 @@ function resolveBearerToken() {
   const authEnvPath = path.resolve(repoDir, authEnvFileRel);
   const composeFile = String(process.env.SMOKE_AUTH_COMPOSE_FILE || "infra/docker-compose.host.yml");
   const hostEnvFile = String(process.env.SMOKE_AUTH_HOST_ENV_FILE || "infra/.env.host");
-  const postgresService = String(process.env.SMOKE_AUTH_POSTGRES_SERVICE || "boltorezka-db-test");
-  const apiService = String(process.env.SMOKE_AUTH_API_SERVICE || "boltorezka-api-test");
+  const postgresService = String(process.env.SMOKE_AUTH_POSTGRES_SERVICE || "datowave-db-test");
+  const apiService = String(process.env.SMOKE_AUTH_API_SERVICE || "datowave-api-test");
   const baseUrl = String(process.env.SMOKE_API_URL || defaultApiUrl);
   const shouldRegenerate = process.env.SMOKE_REGENERATE_AUTH === "1" || !fs.existsSync(authEnvPath);
 

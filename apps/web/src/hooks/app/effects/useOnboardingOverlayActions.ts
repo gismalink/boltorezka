@@ -70,7 +70,7 @@ export function useOnboardingOverlayActions({
       } catch {
         /* best-effort: при ошибке остаётся клиентский кэш */
       }
-      localStorage.setItem(`boltorezka_intro_v1_seen:${user.id}`, "1");
+      localStorage.setItem(`datowave_intro_v1_seen:${user.id}`, "1");
       setShowFirstRunIntro(false);
       pushToast(t("profile.saveSuccess"));
     } catch (error) {

@@ -58,11 +58,11 @@ compose() {
 }
 
 if [[ "$SCOPE" == "test" ]]; then
-  DB_SERVICE="boltorezka-db-test"
+  DB_SERVICE="datowave-db-test"
   DB_USER="$(read_env TEST_POSTGRES_USER)"
   DB_NAME="$(read_env TEST_POSTGRES_DB)"
 else
-  DB_SERVICE="boltorezka-db-prod"
+  DB_SERVICE="datowave-db-prod"
   DB_USER="$(read_env PROD_POSTGRES_USER)"
   DB_NAME="$(read_env PROD_POSTGRES_DB)"
 fi

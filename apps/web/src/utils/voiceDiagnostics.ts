@@ -46,7 +46,7 @@ function isDiagnosticsEnabled(): boolean {
   }
 
   try {
-    return window.localStorage.getItem("boltorezka_voice_debug") === "1";
+    return window.localStorage.getItem("datowave_voice_debug") === "1";
   } catch {
     return false;
   }

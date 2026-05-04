@@ -6,9 +6,9 @@ info:
     Canonical HTTP contract for Datowave v1.
     This spec tracks currently implemented endpoints.
 servers:
-  - url: https://test.boltorezka.gismalink.art
+  - url: https://test.datowave.com
     description: Test
-  - url: https://boltorezka.gismalink.art
+  - url: https://datowave.com
     description: Production
   - url: http://localhost:8080
     description: Local

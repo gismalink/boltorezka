@@ -36,17 +36,17 @@ describe("detectInitialLang", () => {
   });
 
   it("returns saved 'ru' when stored", () => {
-    localStorage.setItem("boltorezka_lang", "ru");
+    localStorage.setItem("datowave_lang", "ru");
     expect(detectInitialLang()).toBe("ru");
   });
 
   it("returns saved 'en' when stored", () => {
-    localStorage.setItem("boltorezka_lang", "en");
+    localStorage.setItem("datowave_lang", "en");
     expect(detectInitialLang()).toBe("en");
   });
 
   it("ignores unknown stored value and falls back to navigator.language", () => {
-    localStorage.setItem("boltorezka_lang", "fr");
+    localStorage.setItem("datowave_lang", "fr");
     vi.spyOn(navigator, "language", "get").mockReturnValue("RU-ru");
     expect(detectInitialLang()).toBe("ru");
   });
