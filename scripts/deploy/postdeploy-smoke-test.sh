@@ -919,9 +919,14 @@ fi
 if [[ "${SMOKE_WEB_VERSION_CACHE:-1}" == "1" ]]; then
   echo "[postdeploy-smoke] smoke:web:version-cache"
   EXPECTED_BUILD_SHA=""
-  if [[ -f ".deploy/last-deploy-test.env" ]]; then
+  DEPLOY_MARKER_FILE=".deploy/last-deploy-test.env"
+  if [[ "$SMOKE_ENV_SCOPE" == "prod" ]]; then
+    DEPLOY_MARKER_FILE=".deploy/last-deploy-prod.env"
+  fi
+
+  if [[ -f "$DEPLOY_MARKER_FILE" ]]; then
     set +u
-    source ".deploy/last-deploy-test.env"
+    source "$DEPLOY_MARKER_FILE"
     set -u
     EXPECTED_BUILD_SHA="${DEPLOY_SHA:-}"
   fi
