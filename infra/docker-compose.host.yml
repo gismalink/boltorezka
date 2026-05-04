@@ -599,6 +599,7 @@ volumes:
     external: true
     name: auth_auth_test_datowave_data
   auth_prod_datowave_data:
+    external: true
     name: auth_auth_prod_datowave_data
   ingress_caddy_data:
     external: true
