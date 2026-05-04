@@ -41,7 +41,7 @@ Status: In progress (core decoupling done in test/prod; OAuth provider hardening
 - [ ] Подключить и подтвердить отдельные Yandex OAuth client id/secret для datowave test/prod.
 - [x] Убедиться, что callback URI datowave у провайдеров совпадают с `auth.datowave.com` и `test.auth.datowave.com`.
 - [x] Удалить workaround `GOOGLE_CALLBACK_BASE_URL` из datowave auth env (в datowave auth env отсутствует).
-- [ ] После стабилизации удалить/зафризить legacy callback-override ветку в shared auth runtime, чтобы исключить обратный дрейф.
+- [x] После стабилизации удалить/зафризить legacy callback-override ветку в shared auth runtime, чтобы исключить обратный дрейф.
 
 ### 2.3 Маршрутизация и cutover
 
@@ -56,8 +56,8 @@ Status: In progress (core decoupling done in test/prod; OAuth provider hardening
 - [x] Добавить release log записи по test/prod rollout и smoke-результатам именно по datowave auth decoupling.
 - [x] Подготовить rollback-команды: возврат `auth(.test).datowave.com` маршрутов на прежний backend.
 - [x] Проверить rollback drill в `test` и зафиксировать время/результат.
-- [ ] Обновить канонику auth/stack docs с новой схемой разделения (edge + datowave).
-- [ ] Зафиксировать удаление временных обходов и финальное steady-state в docs.
+- [x] Обновить канонику auth/stack docs с новой схемой разделения (edge + datowave).
+- [x] Зафиксировать удаление временных обходов и финальное steady-state в docs.
 
 ## 3) Приоритеты
 
@@ -82,9 +82,9 @@ Status: In progress (core decoupling done in test/prod; OAuth provider hardening
 
 ## 6) Следующий практический шаг (короткий)
 
-1. Провести rollback drill в `test` и зафиксировать время/результат.
-2. Обновить канонику auth/stack docs с новой схемой разделения (edge + datowave).
-3. Зафиксировать финальное steady-state и убрать legacy callback override ветку в shared auth runtime.
+1. Подтвердить отдельные Google OAuth client id/secret для datowave test/prod (без placeholders).
+2. Подтвердить отдельные Yandex OAuth client id/secret для datowave test/prod.
+3. При необходимости провести финальный контрольный smoke после обновления provider credentials.
 
 ## 7) Rollback playbook (готово к запуску)
 
@@ -132,3 +132,6 @@ Rollback success criteria:
 	- rollback switch commit: `bcbca81` (`test.auth.datowave.com` -> `auth-sso-api-test`), smoke `PASS`.
 	- restore commit: `475fbf3` (`test.auth.datowave.com` -> `datowave-auth-test-datowave`), smoke `PASS`.
 	- временное окно drill: `2026-05-04T14:42:22Z` -> `2026-05-04T14:43:05Z` (~43s).
+- Legacy callback override cleanup:
+	- shared auth runtime больше не поддерживает `GOOGLE_CALLBACK_BASE_URL` в callback resolution.
+	- канонические docs обновлены под steady-state разделения контуров (`docs/server/auth/README.md`, `docs/server/operations/stacks/AUTH_STACK.md`).
