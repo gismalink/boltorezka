@@ -74,7 +74,10 @@ services:
     volumes:
       - ${AUTH_DB_TEST_DATA_DIR:-/Volumes/datas3/datowave/auth-db/test}:/var/lib/postgresql/data
     networks:
-      - data_test
+      data_test:
+        aliases:
+          - datowave-auth-db-test-datowave
+          - boltorezka-auth-db-test-datowave
 
   datowave-auth-prod-datowave:
     image: datowave-auth:test-n-prod
@@ -103,6 +106,7 @@ services:
       data_prod:
         aliases:
           - datowave-auth-db-prod-datowave
+          - boltorezka-auth-db-prod-datowave
 
   datowave-api-test:
     build:
