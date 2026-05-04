@@ -63,7 +63,7 @@ run_backup_for_service() {
   echo "[backup-db] done $label"
 }
 
-run_backup_for_service "test" "${BACKUP_TEST_DB_SERVICE:-datowave-db-test}" "${BACKUP_TEST_DB_USER:-datowave_test}"
-run_backup_for_service "prod" "${BACKUP_PROD_DB_SERVICE:-datowave-db-prod}" "${BACKUP_PROD_DB_USER:-datowave_prod}"
+run_backup_for_service "test" "${BACKUP_TEST_DB_SERVICE:-datowave-db-test}" "${BACKUP_TEST_DB_USER:-}"
+run_backup_for_service "prod" "${BACKUP_PROD_DB_SERVICE:-datowave-db-prod}" "${BACKUP_PROD_DB_USER:-}"
 
 echo "[backup-db] all backups completed at $BACKUP_ROOT"

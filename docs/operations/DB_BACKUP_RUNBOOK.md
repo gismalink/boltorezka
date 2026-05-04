@@ -44,8 +44,8 @@ npm run backup:db:all
 - `BACKUP_ENV_FILE` - env файл (default: `infra/.env.host`).
 - `BACKUP_TEST_DB_SERVICE` - имя test Postgres service.
 - `BACKUP_PROD_DB_SERVICE` - имя prod Postgres service.
-- `BACKUP_TEST_DB_USER` - пользователь для `pg_dumpall` test (default: `datowave_test`).
-- `BACKUP_PROD_DB_USER` - пользователь для `pg_dumpall` prod (default: `datowave_prod`).
+- `BACKUP_TEST_DB_USER` - пользователь для `pg_dumpall` test (опционально; по умолчанию берется `POSTGRES_USER` из контейнера).
+- `BACKUP_PROD_DB_USER` - пользователь для `pg_dumpall` prod (опционально; по умолчанию берется `POSTGRES_USER` из контейнера).
 
 Пример:
 
