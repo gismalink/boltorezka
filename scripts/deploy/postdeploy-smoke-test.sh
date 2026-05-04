@@ -20,6 +20,12 @@ if [[ "$SMOKE_ENV_SCOPE" == "auto" ]]; then
 fi
 
 if [[ "$SMOKE_ENV_SCOPE" == "prod" ]]; then
+  SMOKE_ALLOW_AUTO_BEARER="${SMOKE_ALLOW_AUTO_BEARER:-0}"
+else
+  SMOKE_ALLOW_AUTO_BEARER="${SMOKE_ALLOW_AUTO_BEARER:-1}"
+fi
+
+if [[ "$SMOKE_ENV_SCOPE" == "prod" ]]; then
   POSTGRES_SERVICE="${SMOKE_POSTGRES_SERVICE:-${PROD_POSTGRES_SERVICE:-datowave-db-prod}}"
   REDIS_SERVICE="${SMOKE_REDIS_SERVICE:-${PROD_REDIS_SERVICE:-datowave-redis-prod}}"
   API_SERVICE="${SMOKE_API_SERVICE:-${PROD_API_SERVICE:-datowave-api-prod}}"
@@ -657,7 +663,9 @@ collect_turn_allocation_failures() {
 SMOKE_USER_ID=""
 SMOKE_USER_ROLE=""
 
-if [[ -z "${SMOKE_TEST_BEARER_TOKEN:-}" ]]; then
+if [[ "$SMOKE_ALLOW_AUTO_BEARER" != "1" ]]; then
+  echo "[postdeploy-smoke] auto-bearer bootstrap skipped (SMOKE_ALLOW_AUTO_BEARER=$SMOKE_ALLOW_AUTO_BEARER, scope=$SMOKE_ENV_SCOPE)"
+elif [[ -z "${SMOKE_TEST_BEARER_TOKEN:-}" ]]; then
   USER_META="$(resolve_user_meta_by_email "$USER_EMAIL")"
 
   if [[ -z "$USER_META" ]]; then
