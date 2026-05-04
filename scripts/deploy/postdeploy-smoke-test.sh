@@ -1118,7 +1118,7 @@ if [[ "$AUTO_TICKET" == "1" ]]; then
     SMOKE_USER_ROLE="${USER_META##*|}"
   fi
 
-  PAYLOAD="$(compose exec -T "$POSTGRES_SERVICE" psql -U "$TEST_POSTGRES_USER" -d "$TEST_POSTGRES_DB" -tAc "select json_build_object('userId', id::text, 'userName', coalesce(name,email,'unknown'), 'email', email, 'role', coalesce(role,'user'), 'issuedAt', now()::text)::text from users where id='${SMOKE_USER_ID}' limit 1;")"
+  PAYLOAD="$(compose exec -T "$POSTGRES_SERVICE" psql -U "$SMOKE_POSTGRES_USER" -d "$SMOKE_POSTGRES_DB" -tAc "select json_build_object('userId', id::text, 'userName', coalesce(name,email,'unknown'), 'email', email, 'role', coalesce(role,'user'), 'issuedAt', now()::text)::text from users where id='${SMOKE_USER_ID}' limit 1;")"
 
   if [[ -z "$PAYLOAD" ]]; then
     echo "[postdeploy-smoke] cannot resolve smoke user payload for email=$USER_EMAIL" >&2
@@ -1140,7 +1140,7 @@ if [[ "$AUTO_TICKET" == "1" ]]; then
   fi
 
   SECOND_USER_ID="${USER_META_SECOND_AUTO%%|*}"
-  SECOND_PAYLOAD="$(compose exec -T "$POSTGRES_SERVICE" psql -U "$TEST_POSTGRES_USER" -d "$TEST_POSTGRES_DB" -tAc "select json_build_object('userId', id::text, 'userName', coalesce(name,email,'unknown'), 'email', email, 'role', coalesce(role,'user'), 'issuedAt', now()::text)::text from users where id='${SECOND_USER_ID}' limit 1;")"
+  SECOND_PAYLOAD="$(compose exec -T "$POSTGRES_SERVICE" psql -U "$SMOKE_POSTGRES_USER" -d "$SMOKE_POSTGRES_DB" -tAc "select json_build_object('userId', id::text, 'userName', coalesce(name,email,'unknown'), 'email', email, 'role', coalesce(role,'user'), 'issuedAt', now()::text)::text from users where id='${SECOND_USER_ID}' limit 1;")"
 
   if [[ -z "$SECOND_PAYLOAD" ]]; then
     echo "[postdeploy-smoke] cannot resolve second smoke user payload for email=$USER_EMAIL_SECOND" >&2
