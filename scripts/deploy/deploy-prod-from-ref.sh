@@ -85,6 +85,13 @@ if [[ "$PROD_ICE_POLICY" == "relay" && "$ALLOW_PROD_RELAY_ONLY" != "1" ]]; then
   exit 1
 fi
 
+PROD_LIVEKIT_URL_VALUE="$(read_env_value "PROD_LIVEKIT_URL" "$ENV_FILE")"
+PROD_LIVEKIT_URL_NORMALIZED="$(echo "$PROD_LIVEKIT_URL_VALUE" | tr '[:upper:]' '[:lower:]')"
+if [[ -n "$PROD_LIVEKIT_URL_NORMALIZED" && "$PROD_LIVEKIT_URL_NORMALIZED" != "wss://datowave.com" ]]; then
+  echo "[deploy-prod] blocked: PROD_LIVEKIT_URL must be wss://datowave.com (got: $PROD_LIVEKIT_URL_VALUE)" >&2
+  exit 1
+fi
+
 echo "[deploy-prod] deploy mode: api-only + caddy-static-sync (set FULL_RECREATE=1 for full dependency recreate)"
 TMP_DOCKER_CONFIG="$(mktemp -d)"
 TMP_DEPLOY_ENV="$(mktemp)"
