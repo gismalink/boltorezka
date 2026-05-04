@@ -17,6 +17,7 @@ Status: In progress (core decoupling done in test/prod; OAuth provider hardening
 - Выполнено: `test.auth.datowave.com` и `auth.datowave.com` в ingress указывают на datowave auth backend.
 - Выполнено: smoke-проверки auth routing и postdeploy smoke для prod проходили успешно в текущем rollout цикле.
 - Выполнено: после обновления edge smoke (`prod datowave auth container checks`) test smoke снова подтвержден в green после восстановления static sync.
+- Выполнено: `prod` smoke подтвержден в green после штатного `deploy-prod-from-ref` (восстановлен `ingress/static/datowave/prod`).
 - Требует закрытия: финальная верификация OAuth client settings у провайдеров (Google/Yandex) и фиксация release log/runbook для этого трека.
 
 ## 1) Цели
@@ -52,7 +53,7 @@ Status: In progress (core decoupling done in test/prod; OAuth provider hardening
 
 ### 2.4 Наблюдаемость, rollback и документация
 
-- [ ] Добавить release log записи по test/prod rollout и smoke-результатам именно по datowave auth decoupling.
+- [x] Добавить release log записи по test/prod rollout и smoke-результатам именно по datowave auth decoupling.
 - [x] Подготовить rollback-команды: возврат `auth(.test).datowave.com` маршрутов на прежний backend.
 - [ ] Проверить rollback drill в `test` и зафиксировать время/результат.
 - [ ] Обновить канонику auth/stack docs с новой схемой разделения (edge + datowave).
@@ -70,7 +71,7 @@ Status: In progress (core decoupling done in test/prod; OAuth provider hardening
 - [x] Для Datowave Google redirect использует свой datowave callback URI без `redirect_uri_mismatch`.
 - [ ] Для Datowave logout выставляет/чистит cookie в домене `.datowave.com`; для gismalink в `.gismalink.art` (добавить явный smoke/assert и запись в лог).
 - [x] `gismalink` auth flow не зависит от datowave auth runtime и не деградировал после cutover.
-- [ ] Все smoke проверки `test` и `prod` пройдены и зафиксированы в release log (smoke есть, release log по этому плану нужно дописать).
+- [x] Все smoke проверки `test` и `prod` пройдены и зафиксированы в release log.
 
 ## 5) Ограничения выполнения
 
