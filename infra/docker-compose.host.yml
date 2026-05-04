@@ -23,6 +23,10 @@ services:
           TURN_VERBOSE_ARG="--verbose"
         fi
 
+        TURN_CERT_DOMAIN_ARG="${TURN_CERT_DOMAIN:-datowave.com}"
+        TURN_CERT_FILE_ARG="${TURN_CERT_FILE:-/turn-certs/$${TURN_CERT_DOMAIN_ARG}.crt}"
+        TURN_KEY_FILE_ARG="${TURN_KEY_FILE:-/turn-certs/$${TURN_CERT_DOMAIN_ARG}.key}"
+
         exec turnserver \
           --no-cli \
           --simple-log \
@@ -35,8 +39,8 @@ services:
           $${TURN_LISTEN_IP_ARG} \
           $${TURN_RELAY_IP_ARG} \
           --user="${TURN_USERNAME}:${TURN_PASSWORD}" \
-          --cert=/caddy-data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/${TURN_CERT_DOMAIN:-datowave.com}/${TURN_CERT_DOMAIN:-datowave.com}.crt \
-          --pkey=/caddy-data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/${TURN_CERT_DOMAIN:-datowave.com}/${TURN_CERT_DOMAIN:-datowave.com}.key \
+          --cert=$${TURN_CERT_FILE_ARG} \
+          --pkey=$${TURN_KEY_FILE_ARG} \
           --min-port=${TURN_MIN_PORT:-30000} \
           --max-port=${TURN_MAX_PORT:-31000} \
           $${TURN_VERBOSE_ARG}
@@ -47,10 +51,10 @@ services:
       - "${TURN_MIN_PORT:-30000}-${TURN_MAX_PORT:-31000}:${TURN_MIN_PORT:-30000}-${TURN_MAX_PORT:-31000}/udp"
       - "${TURN_MIN_PORT:-30000}-${TURN_MAX_PORT:-31000}:${TURN_MIN_PORT:-30000}-${TURN_MAX_PORT:-31000}/tcp"
     volumes:
-      - ${CADDY_DATA_DIR:-/Volumes/datas3/srv/edge/ingress/caddy-data}:/caddy-data:ro
+      - ${TURN_CERTS_DIR:-/Volumes/datas3/datowave/turn-certs}:/turn-certs:ro
       - ${TURN_STATE_DIR:-/Volumes/datas3/datowave/turn-state}:/var/lib/coturn
     networks:
-      - edge_public
+      - datowave_public
 
   datowave-auth-test-datowave:
     image: datowave-auth:test-n-prod
@@ -61,7 +65,7 @@ services:
     depends_on:
       - datowave-auth-db-test-datowave
     networks:
-      - edge_public
+      - datowave_public
       - data_test
 
   datowave-auth-db-test-datowave:
@@ -89,7 +93,7 @@ services:
     depends_on:
       - datowave-auth-db-prod-datowave
     networks:
-      - edge_public
+      - datowave_public
       - data_prod
 
   datowave-auth-db-prod-datowave:
@@ -170,7 +174,7 @@ services:
       datowave-redis-test:
         condition: service_healthy
     networks:
-      - edge_public
+      - datowave_public
       - data_test
 
   datowave-db-test:
@@ -343,7 +347,7 @@ services:
       datowave-redis-test:
         condition: service_healthy
     networks:
-      - edge_public
+      - datowave_public
       - data_test
 
   datowave-api-prod:
@@ -407,7 +411,7 @@ services:
       datowave-redis-prod:
         condition: service_healthy
     networks:
-      - edge_public
+      - datowave_public
       - data_prod
 
   datowave-db-prod:
@@ -579,36 +583,14 @@ services:
       datowave-redis-prod:
         condition: service_healthy
     networks:
-      - edge_public
+      - datowave_public
       - data_prod
 
 networks:
-  edge_public:
+  datowave_public:
+    name: datowave_public
     external: true
   data_test:
     driver: bridge
   data_prod:
     driver: bridge
-
-volumes:
-  postgres_test_data:
-    external: true
-    name: datowave_postgres_test_data
-  postgres_prod_data:
-    external: true
-    name: datowave_postgres_prod_data
-  minio_test_data:
-    external: true
-    name: datowave_minio_test_data
-  minio_prod_data:
-    external: true
-    name: datowave_minio_prod_data
-  auth_test_datowave_data:
-    external: true
-    name: auth_auth_test_datowave_data
-  auth_prod_datowave_data:
-    external: true
-    name: auth_auth_prod_datowave_data
-  ingress_caddy_data:
-    external: true
-    name: ingress_caddy_data
