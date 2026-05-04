@@ -76,6 +76,35 @@ services:
     networks:
       - data_test
 
+  datowave-auth-prod-datowave:
+    image: datowave-auth:test-n-prod
+    container_name: datowave-auth-prod-datowave
+    restart: unless-stopped
+    env_file:
+      - ./.env.auth.prod.datowave
+    depends_on:
+      - datowave-auth-db-prod-datowave
+    networks:
+      - edge_public
+      - data_prod
+
+  datowave-auth-db-prod-datowave:
+    image: postgres:16
+    container_name: datowave-auth-db-prod-datowave
+    hostname: boltorezka-auth-db-prod-datowave
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: auth_prod_datowave
+      POSTGRES_USER: auth_prod_datowave
+      POSTGRES_PASSWORD: auth_prod_datowave
+    volumes:
+      - auth_prod_datowave_data:/var/lib/postgresql/data
+    networks:
+      data_prod:
+        aliases:
+          - datowave-auth-db-prod-datowave
+          - boltorezka-auth-db-prod-datowave
+
   datowave-api-test:
     build:
       context: ../apps/api
@@ -569,6 +598,8 @@ volumes:
   auth_test_datowave_data:
     external: true
     name: auth_auth_test_datowave_data
+  auth_prod_datowave_data:
+    name: auth_auth_prod_datowave_data
   ingress_caddy_data:
     external: true
     name: ingress_caddy_data
