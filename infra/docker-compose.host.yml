@@ -91,7 +91,7 @@ services:
   datowave-auth-db-prod-datowave:
     image: postgres:16
     container_name: datowave-auth-db-prod-datowave
-    hostname: boltorezka-auth-db-prod-datowave
+    hostname: datowave-auth-db-prod-datowave
     restart: unless-stopped
     environment:
       POSTGRES_DB: auth_prod_datowave
@@ -103,7 +103,6 @@ services:
       data_prod:
         aliases:
           - datowave-auth-db-prod-datowave
-          - boltorezka-auth-db-prod-datowave
 
   datowave-api-test:
     build:
@@ -585,16 +584,16 @@ networks:
 volumes:
   postgres_test_data:
     external: true
-    name: boltorezka_postgres_test_data
+    name: datowave_postgres_test_data
   postgres_prod_data:
     external: true
-    name: boltorezka_postgres_prod_data
+    name: datowave_postgres_prod_data
   minio_test_data:
     external: true
-    name: boltorezka_minio_test_data
+    name: datowave_minio_test_data
   minio_prod_data:
     external: true
-    name: boltorezka_minio_prod_data
+    name: datowave_minio_prod_data
   auth_test_datowave_data:
     external: true
     name: auth_auth_test_datowave_data
