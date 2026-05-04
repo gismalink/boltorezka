@@ -228,9 +228,14 @@ export class RealtimeClient {
           return;
         }
 
-        this.ws = new WebSocket(`${wsBase()}/v1/realtime/ws?ticket=${encodeURIComponent(ticket)}&client=web`);
+        const socket = new WebSocket(`${wsBase()}/v1/realtime/ws?ticket=${encodeURIComponent(ticket)}&client=web`);
+        this.ws = socket;
 
-        this.ws.onopen = () => {
+        socket.onopen = () => {
+          if (this.ws !== socket || this.isDisposed) {
+            return;
+          }
+
           this.reconnectAttempt = 0;
           this.lastInboundAt = Date.now();
           this.options.onWsStateChange("connected");
@@ -274,19 +279,32 @@ export class RealtimeClient {
           }, 5000);
         };
 
-        this.ws.onclose = () => {
+        socket.onclose = () => {
+          if (this.ws !== socket || this.isDisposed) {
+            return;
+          }
+
           this.options.onWsStateChange("disconnected");
           this.options.onLog("ws disconnected");
           this.clearAllAckTimers();
           this.clearTimers();
+          this.ws = null;
           this.scheduleReconnect();
         };
 
-        this.ws.onerror = () => {
+        socket.onerror = () => {
+          if (this.ws !== socket || this.isDisposed) {
+            return;
+          }
+
           this.options.onLog("ws error");
         };
 
-        this.ws.onmessage = (event) => {
+        socket.onmessage = (event) => {
+          if (this.ws !== socket || this.isDisposed) {
+            return;
+          }
+
           this.lastInboundAt = Date.now();
           try {
             const message = JSON.parse(event.data) as WsIncoming;
