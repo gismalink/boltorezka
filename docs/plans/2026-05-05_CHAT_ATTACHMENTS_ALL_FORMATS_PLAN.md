@@ -33,7 +33,7 @@ Scope: Расширение вложений чата для room chat и DM: м
 
 ### 2.1 Backend API и модель данных
 
-- [ ] Расширить контракт upload/finalize для пакетного сценария (батч attach перед send) без ломки одиночного режима.
+- [x] Расширить контракт upload/finalize для пакетного сценария (батч attach перед send) без ломки одиночного режима.
 - [ ] Ввести в metadata вложения признак класса размера (`small` <=25MB, `large` >25MB) и `expiresAt` для large.
 - [ ] Добавить server-side валидацию размера до 1GB (через конфиг), единый код ошибок для oversize.
 - [ ] Уточнить определение типа вложения: не ограничивать продукт до image/document/audio, хранить MIME и category вычислять отдельно для UI.
@@ -41,43 +41,43 @@ Scope: Расширение вложений чата для room chat и DM: м
 
 ### 2.2 Frontend composer UX
 
-- [ ] Перевести composer с single pending attachment на список pending attachments.
-- [ ] Добавить multi-select и drag/drop нескольких файлов за раз.
-- [ ] Для каждого pending файла показывать:
+- [x] Перевести composer с single pending attachment на список pending attachments.
+- [x] Добавить multi-select и drag/drop нескольких файлов за раз.
+- [x] Для каждого pending файла показывать:
   - имя;
   - MIME/формат;
   - размер;
   - статус (`queued`, `uploading`, `uploaded`, `failed`);
   - прогресс (0-100%).
-- [ ] Разрешить удаление любого pending файла до отправки.
-- [ ] Отправка сообщения должна прикладывать все успешно загруженные вложения одним action.
-- [ ] Обработать частичные ошибки: часть файлов загрузилась, часть нет (clear UX и retry).
+- [x] Разрешить удаление любого pending файла до отправки.
+- [x] Отправка сообщения должна прикладывать все успешно загруженные вложения одним action.
+- [x] Обработать частичные ошибки: часть файлов загрузилась, часть нет (clear UX и retry).
 
 ### 2.2.1 Composer panel redesign (переверстка под референс)
 
-- [ ] Переверстать панель отправки сообщений под референсный макет (из скриншота):
+- [x] Переверстать панель отправки сообщений под референсный макет (из скриншота):
   - блок панели внизу с усиленным blur/overlay эффектом;
   - отдельная строка предпросмотра pending-вложений над полем ввода;
   - chips вложений с типом (`.jpg`, `.doc`), размером и кнопкой удаления (`x`);
   - слева компактная кнопка attach/clip;
   - справа круглая кнопка send (floating внутри панели);
   - multiline input с корректным auto-grow и без наезда на chips.
-- [ ] Сохранить текущую семантику и hotkeys (`Enter` отправка, `Shift+Enter` перенос), не ломая существующий flow.
-- [ ] Добавить адаптив для mobile/desktop:
+- [x] Сохранить текущую семантику и hotkeys (`Enter` отправка, `Shift+Enter` перенос), не ломая существующий flow.
+- [x] Добавить адаптив для mobile/desktop:
   - mobile: chips не перекрывают input, горизонтальный скролл chips при переполнении;
   - desktop: стабильные отступы, фиксированная зона кнопок attach/send.
-- [ ] Обеспечить доступность (a11y):
+- [x] Обеспечить доступность (a11y):
   - фокус-стили на chips/buttons;
   - клавиатурное удаление выбранного attachment;
   - aria-label для кнопок удаления/attach/send.
-- [ ] Не ломать текущие data-agent-id/селекторы для browser smoke (если используются в composer).
+- [x] Не ломать текущие data-agent-id/селекторы для browser smoke (если используются в composer).
 
 ### 2.3 Upload transport и прогресс
 
-- [ ] Перейти на transport с upload progress callback для object PUT (XHR/fetch+stream, где поддерживается).
-- [ ] Добавить retry-политику для network ошибок upload (без дублирования finalize).
-- [ ] Гарантировать идемпотентность finalize в multi-file сценарии.
-- [ ] Добавить client telemetry по этапам upload (init/put/finalize, latency, failure code).
+- [x] Перейти на transport с upload progress callback для object PUT (XHR/fetch+stream, где поддерживается).
+- [x] Добавить retry-политику для network ошибок upload (без дублирования finalize).
+- [x] Гарантировать идемпотентность finalize в multi-file сценарии.
+- [x] Добавить client telemetry по этапам upload (init/put/finalize, latency, failure code).
 
 ### 2.4 Конфигурация лимитов (единый конфиг)
 
@@ -167,16 +167,16 @@ Scope: Расширение вложений чата для room chat и DM: м
 
 ## 4) Acceptance criteria
 
-- [ ] Пользователь может выбрать и прикрепить более одного файла за раз.
-- [ ] До отправки сообщения можно удалить любой pending файл.
-- [ ] В UI видны формат файла и прогресс загрузки по каждому файлу.
-- [ ] Панель отправки визуально и структурно соответствует референсу (chips над input, attach слева, send справа, clean spacing).
-- [ ] При большом количестве вложений панель не ломает layout и остается кликабельной на mobile/desktop.
+- [x] Пользователь может выбрать и прикрепить более одного файла за раз.
+- [x] До отправки сообщения можно удалить любой pending файл.
+- [x] В UI видны формат файла и прогресс загрузки по каждому файлу.
+- [x] Панель отправки визуально и структурно соответствует референсу (chips над input, attach слева, send справа, clean spacing).
+- [x] При большом количестве вложений панель не ломает layout и остается кликабельной на mobile/desktop.
 - [ ] Сервер принимает файлы до 1GB и корректно отклоняет больше лимита.
 - [ ] Файлы >25MB автоматически получают TTL 7 дней и удаляются cleanup job.
 - [ ] Backup flow не включает файлы >25MB.
 - [ ] Все лимиты вынесены в единый конфиг и задокументированы.
-- [ ] Smoke test для test/prod проходит без регрессий отправки сообщений и вложений.
+- [x] Smoke test для test/prod проходит без регрессий отправки сообщений и вложений (test validated; desktop update feed шаг отдельно с known issue).
 - [ ] В DM доступен новый action `Передать файл` (не attachment).
 - [ ] Получатель подтверждает прием и выбирает путь сохранения до старта передачи.
 - [ ] В DM нижняя панель передачи отображает активные/завершенные transfer-сессии и их статусы.
@@ -209,6 +209,8 @@ Scope: Расширение вложений чата для room chat и DM: м
 
 5. Stage E: Test rollout
 - Deploy в test, e2e smoke + ручные сценарии (1 файл, N файлов, 1GB-1 byte, >1GB, mixed успех/ошибки).
+
+Status: completed for current scope (batch finalize + multi-file queue + progress + retry).
 
 6. Stage F: DM P2P transfer MVP (test)
 - Signaling events + DM transfer rail UI + single-file direct transfer.
@@ -294,10 +296,13 @@ Scope: Расширение вложений чата для room chat и DM: м
   - переход с single pending file на queue.
   - реализовано: multiple file picker, queue chips, remove per chip.
   - текущий transitional send behavior: отправляется первый файл из очереди за submit.
-- Iteration 3 (in progress): upload progress + retries + batch finalize
+- Iteration 3 (completed): upload progress + retries + batch finalize
   - реализовано: backend endpoint `/v1/chat/uploads/finalize-batch` + web client integration.
   - реализовано: multi-file send -> single message with multiple attachments.
-  - pending: per-file progress UI + retry policy + telemetry.
+  - реализовано: per-file progress UI (upload states + progress bar) + per-file retry action в chips.
+  - реализовано: client telemetry события `chat.upload.init.ok`, `chat.upload.put.ok`, `chat.upload.finalize_batch.ok`, `chat.upload.batch.failed`.
+  - реализовано: server-side idempotency guard для batch finalize (request hash + redis lock + replay cache).
+  - test rollout выполнен, smoke web/api/realtime пройден (desktop update feed отмечен как отдельный known issue).
 - Iteration 4 (planned): DM P2P transfer MVP
   - signaling protocol + transfer rail UI;
   - single-file offer/accept/save flow;

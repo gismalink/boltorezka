@@ -192,6 +192,46 @@ function buildUploadAuditContext(request: FastifyRequest, extra: Record<string, 
   };
 }
 
+function buildFinalizeBatchIdempotencyKey(input: {
+  userId: string;
+  roomSlug: string;
+  topicId: string | null;
+  text: string;
+  mentionUserIds: string[];
+  uploads: Array<{
+    uploadId: string;
+    storageKey: string;
+    mimeType: string;
+    sizeBytes: number;
+    checksum?: string;
+  }>;
+}): string {
+  const uploadsSignature = [...input.uploads]
+    .map((item) => {
+      return [
+        String(item.uploadId || "").trim(),
+        String(item.storageKey || "").trim(),
+        normalizeMimeType(String(item.mimeType || "")),
+        String(Number(item.sizeBytes || 0)),
+        String(item.checksum || "").trim()
+      ].join(":");
+    })
+    .sort()
+    .join("|");
+
+  const mentionsSignature = [...input.mentionUserIds].sort().join("|");
+  const source = [
+    input.userId,
+    input.roomSlug,
+    input.topicId || "",
+    input.text,
+    mentionsSignature,
+    uploadsSignature
+  ].join("\n");
+
+  return createHash("sha256").update(source).digest("hex");
+}
+
 function resolveUploadRateLimitSubject(request: FastifyRequest): string {
   const userId = normalizeBoundedString(request.user?.sub, 128) || "";
   if (userId) {
@@ -1171,6 +1211,48 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
         ? parsed.data.mentionUserIds.map((item) => normalizeBoundedString(item, 128) || "").filter((item) => item.length > 0)
         : [];
 
+      const idempotencyKey = buildFinalizeBatchIdempotencyKey({
+        userId,
+        roomSlug: requestRoomSlug,
+        topicId: requestTopicId,
+        text,
+        mentionUserIds,
+        uploads: parsed.data.uploads
+      });
+      const idemCacheKey = `chat:upload:finalize-batch:idem:${userId}:${idempotencyKey}`;
+      const idemLockKey = `${idemCacheKey}:lock`;
+      const idemLockToken = randomUUID();
+
+      const cachedResponseRaw = await fastify.redis.get(idemCacheKey);
+      if (cachedResponseRaw) {
+        try {
+          const cachedResponse = JSON.parse(cachedResponseRaw) as ChatUploadFinalizeBatchResponse;
+          request.log.info(
+            buildUploadAuditContext(request, {
+              event: "chat.upload.finalize_batch",
+              status: "idempotency_replay",
+              roomSlug: requestRoomSlug,
+              topicId: requestTopicId,
+              idempotencyKey
+            }),
+            "chat upload batch finalize replayed"
+          );
+          return cachedResponse;
+        } catch {
+          await fastify.redis.del(idemCacheKey);
+        }
+      }
+
+      const lockAcquired = await fastify.redis.setnx(idemLockKey, idemLockToken);
+      if (lockAcquired !== 1) {
+        reply.header("Retry-After", "1");
+        return reply.code(409).send({
+          error: "FinalizeInProgress",
+          message: "Finalize request is already being processed"
+        });
+      }
+      await fastify.redis.expire(idemLockKey, 30);
+
       type PreparedAttachment = {
         uploadId: string;
         reservation: UploadReservation;
@@ -1183,6 +1265,8 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
       };
 
       const prepared: PreparedAttachment[] = [];
+
+      try {
 
       for (const upload of parsed.data.uploads) {
         const uploadId = upload.uploadId;
@@ -1461,12 +1545,21 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
           roomSlug: firstReservation.roomSlug,
           topicId: firstReservation.topicId,
           uploadCount: insertedAttachments.length,
-          messageId: responseMessage.id
+          messageId: responseMessage.id,
+          idempotencyKey
         }),
         "chat upload batch finalized"
       );
 
+      await fastify.redis.setEx(idemCacheKey, config.chatUploadInitTtlSec, JSON.stringify(response));
+
       return response;
+      } finally {
+        const activeLockToken = await fastify.redis.get(idemLockKey);
+        if (activeLockToken === idemLockToken) {
+          await fastify.redis.del(idemLockKey);
+        }
+      }
     }
   );
 }
