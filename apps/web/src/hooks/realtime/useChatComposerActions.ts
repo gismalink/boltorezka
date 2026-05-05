@@ -30,6 +30,12 @@ import {
 import { getErrorCode } from "../../services/chatErrorUtils";
 import { asTrimmedString } from "../../utils/stringUtils";
 
+type PendingAttachmentUploadState = "queued" | "uploading" | "uploaded" | "failed";
+
+function buildPendingAttachmentFileKey(file: Pick<File, "name" | "size" | "lastModified">): string {
+  return `${String(file.name || "")}:${Number(file.size || 0)}:${Number(file.lastModified || 0)}`;
+}
+
 type UseChatComposerActionsParams = {
   chatRoomSlug: string;
   activeTopicId: string | null;
@@ -180,6 +186,9 @@ export function useChatComposerActions({
     Record<string, Record<string, { count: number; reacted: boolean }>>
   >({});
   const [pendingChatAttachmentFiles, setPendingChatAttachmentFiles] = useState<File[]>([]);
+  const [pendingChatAttachmentStateByKey, setPendingChatAttachmentStateByKey] = useState<
+    Record<string, { state: PendingAttachmentUploadState; progress: number }>
+  >({});
 
   useEffect(() => {
     const existingIds = new Set(messages.map((item) => item.id));
@@ -265,6 +274,15 @@ export function useChatComposerActions({
         editingMessageId,
         pendingChatImageDataUrl,
         pendingChatAttachmentFiles,
+        onAttachmentProgress: ({ fileKey, status, progress }) => {
+          setPendingChatAttachmentStateByKey((prev) => ({
+            ...prev,
+            [String(fileKey || "")]: {
+              state: status,
+              progress: Math.max(0, Math.min(100, Math.round(Number(progress || 0))))
+            }
+          }));
+        },
         user,
         maxChatRetries,
         maxDataUrlLength: serverChatImagePolicy.maxDataUrlLength,
@@ -309,7 +327,8 @@ export function useChatComposerActions({
 
       setChatText("");
       setPendingChatImageDataUrl(null);
-      setPendingChatAttachmentFiles((prev) => (prev.length > 1 ? prev.slice(1) : []));
+      setPendingChatAttachmentFiles([]);
+      setPendingChatAttachmentStateByKey({});
       if (result.mode === "edit") {
         setEditingMessageId(null);
       }
@@ -350,6 +369,7 @@ export function useChatComposerActions({
     setEditingMessageId,
     setReplyingToMessageId,
     setPendingChatAttachmentFiles,
+    setPendingChatAttachmentStateByKey,
     setPendingChatImageDataUrl,
     user
   ]);
@@ -380,6 +400,7 @@ export function useChatComposerActions({
           const dataUrl = await compressImageToDataUrl(imageFile, serverChatImagePolicy);
           setPendingChatImageDataUrl(dataUrl);
           setPendingChatAttachmentFiles([]);
+          setPendingChatAttachmentStateByKey({});
           return;
         }
 
@@ -390,12 +411,14 @@ export function useChatComposerActions({
           const dataUrl = await compressImageToDataUrl(synthesizedFile, serverChatImagePolicy);
           setPendingChatImageDataUrl(dataUrl);
           setPendingChatAttachmentFiles([]);
+          setPendingChatAttachmentStateByKey({});
           return;
         }
 
         if (/^https?:\/\//i.test(htmlImageSource)) {
           setPendingChatImageDataUrl(htmlImageSource);
           setPendingChatAttachmentFiles([]);
+          setPendingChatAttachmentStateByKey({});
           return;
         }
 
@@ -406,6 +429,7 @@ export function useChatComposerActions({
           const dataUrl = await compressImageToDataUrl(synthesizedFile, serverChatImagePolicy);
           setPendingChatImageDataUrl(dataUrl);
           setPendingChatAttachmentFiles([]);
+          setPendingChatAttachmentStateByKey({});
           return;
         }
 
@@ -414,7 +438,15 @@ export function useChatComposerActions({
         pushToast(chatImageTooLargeMessage);
       }
     })();
-  }, [chatImageTooLargeMessage, chatRoomSlug, pushToast, serverChatImagePolicy, setPendingChatAttachmentFiles, setPendingChatImageDataUrl]);
+  }, [
+    chatImageTooLargeMessage,
+    chatRoomSlug,
+    pushToast,
+    serverChatImagePolicy,
+    setPendingChatAttachmentFiles,
+    setPendingChatAttachmentStateByKey,
+    setPendingChatImageDataUrl
+  ]);
 
   const selectAttachmentFiles = useCallback((files: File[]) => {
     if (!Array.isArray(files) || files.length === 0) {
@@ -440,17 +472,38 @@ export function useChatComposerActions({
 
       return appended.length > 0 ? [...prev, ...appended] : prev;
     });
-  }, [setPendingChatAttachmentFiles, setPendingChatImageDataUrl]);
+
+    setPendingChatAttachmentStateByKey((prev) => {
+      const next = { ...prev };
+      normalizedFiles.forEach((file) => {
+        const key = buildPendingAttachmentFileKey(file);
+        if (!next[key]) {
+          next[key] = {
+            state: "queued",
+            progress: 0
+          };
+        }
+      });
+      return next;
+    });
+  }, [setPendingChatAttachmentFiles, setPendingChatAttachmentStateByKey, setPendingChatImageDataUrl]);
 
   const selectAttachmentFile = useCallback((file: File | null) => {
     if (!file) {
       setPendingChatAttachmentFiles([]);
+      setPendingChatAttachmentStateByKey({});
       return;
     }
 
     setPendingChatImageDataUrl(null);
     setPendingChatAttachmentFiles([file]);
-  }, [setPendingChatAttachmentFiles, setPendingChatImageDataUrl]);
+    setPendingChatAttachmentStateByKey({
+      [buildPendingAttachmentFileKey(file)]: {
+        state: "queued",
+        progress: 0
+      }
+    });
+  }, [setPendingChatAttachmentFiles, setPendingChatAttachmentStateByKey, setPendingChatImageDataUrl]);
 
   const removePendingAttachmentAt = useCallback((index: number) => {
     const safeIndex = Number(index);
@@ -458,13 +511,49 @@ export function useChatComposerActions({
       return;
     }
 
-    setPendingChatAttachmentFiles((prev) => prev.filter((_, fileIndex) => fileIndex !== safeIndex));
-  }, [setPendingChatAttachmentFiles]);
+    let removedKey = "";
+    setPendingChatAttachmentFiles((prev) => {
+      const targetFile = prev[safeIndex];
+      removedKey = targetFile ? buildPendingAttachmentFileKey(targetFile) : "";
+      return prev.filter((_, fileIndex) => fileIndex !== safeIndex);
+    });
+
+    if (removedKey) {
+      setPendingChatAttachmentStateByKey((mapPrev) => {
+        const next = { ...mapPrev };
+        delete next[removedKey];
+        return next;
+      });
+    }
+  }, [setPendingChatAttachmentFiles, setPendingChatAttachmentStateByKey]);
+
+  const retryPendingAttachmentAt = useCallback((index: number) => {
+    const safeIndex = Number(index);
+    if (!Number.isFinite(safeIndex) || safeIndex < 0) {
+      return;
+    }
+
+    const targetFile = pendingChatAttachmentFiles[safeIndex] || null;
+    if (!targetFile) {
+      return;
+    }
+
+    const targetKey = buildPendingAttachmentFileKey(targetFile);
+    setPendingChatAttachmentStateByKey((prev) => {
+      const next = { ...prev };
+      next[targetKey] = {
+        state: "queued",
+        progress: 0
+      };
+      return next;
+    });
+  }, [pendingChatAttachmentFiles, setPendingChatAttachmentStateByKey]);
 
   const clearPendingAttachment = useCallback(() => {
     setPendingChatAttachmentFiles([]);
+    setPendingChatAttachmentStateByKey({});
     setPendingChatImageDataUrl(null);
-  }, [setPendingChatAttachmentFiles, setPendingChatImageDataUrl]);
+  }, [setPendingChatAttachmentFiles, setPendingChatAttachmentStateByKey, setPendingChatImageDataUrl]);
 
   const handleChatInputKeyDown = useCallback((event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
@@ -784,9 +873,11 @@ export function useChatComposerActions({
     reportMessage,
     pendingChatAttachmentFile: pendingChatAttachmentFiles[0] || null,
     pendingChatAttachmentFiles,
+    pendingChatAttachmentStateByKey,
     selectAttachmentFiles,
     selectAttachmentFile,
     removePendingAttachmentAt,
+    retryPendingAttachmentAt,
     clearPendingAttachment,
     applyRemotePinState,
     applyRemoteMessageReactionState

@@ -1845,6 +1845,14 @@ pre {
   background: color-mix(in srgb, var(--pixel-panel-2) 84%, var(--pixel-panel) 16%);
 }
 
+.chat-compose-chip[data-upload-state="failed"] {
+  border-color: color-mix(in srgb, var(--pixel-neon-red) 58%, var(--pixel-border) 42%);
+}
+
+.chat-compose-chip[data-upload-state="uploaded"] {
+  border-color: color-mix(in srgb, var(--pixel-neon-green) 55%, var(--pixel-border) 45%);
+}
+
 .chat-compose-chip-main {
   display: inline-flex;
   align-items: center;
@@ -1889,7 +1897,44 @@ pre {
   white-space: nowrap;
 }
 
+.chat-compose-chip-progress {
+  color: color-mix(in srgb, var(--pixel-neon-cyan) 70%, var(--pixel-text) 30%);
+  font-size: calc(var(--font-size-sm) - 0.22rem);
+  white-space: nowrap;
+}
+
+.chat-compose-chip-progressbar {
+  position: relative;
+  width: 54px;
+  height: 4px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--pixel-bg) 66%, transparent 34%);
+}
+
+.chat-compose-chip-progressbar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--pixel-neon-cyan) 68%, transparent 32%), color-mix(in srgb, var(--pixel-neon-green) 58%, transparent 42%));
+}
+
+.chat-compose-chip[data-upload-state="failed"] .chat-compose-chip-progress {
+  color: color-mix(in srgb, var(--pixel-neon-red) 72%, var(--pixel-text) 28%);
+}
+
+.chat-compose-chip[data-upload-state="failed"] .chat-compose-chip-progressbar > span {
+  background: color-mix(in srgb, var(--pixel-neon-red) 74%, transparent 26%);
+}
+
 .chat-compose-chip-remove {
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+  border-radius: 999px;
+}
+
+.chat-compose-chip-retry {
   min-width: 24px;
   min-height: 24px;
   padding: 0;

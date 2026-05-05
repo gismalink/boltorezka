@@ -44,9 +44,11 @@ export function useAppRoomChatActions({ roomPresence, chatComposer }: UseAppRoom
     reportMessage,
     pendingChatAttachmentFile,
     pendingChatAttachmentFiles,
+    pendingChatAttachmentStateByKey,
     selectAttachmentFiles,
     selectAttachmentFile,
     removePendingAttachmentAt,
+    retryPendingAttachmentAt,
     clearPendingAttachment,
     applyRemotePinState,
     applyRemoteMessageReactionState
@@ -72,9 +74,11 @@ export function useAppRoomChatActions({ roomPresence, chatComposer }: UseAppRoom
     reportMessage,
     pendingChatAttachmentFile,
     pendingChatAttachmentFiles,
+    pendingChatAttachmentStateByKey,
     selectAttachmentFiles,
     selectAttachmentFile,
     removePendingAttachmentAt,
+    retryPendingAttachmentAt,
     clearPendingAttachment,
     applyRemotePinState,
     applyRemoteMessageReactionState

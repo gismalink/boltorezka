@@ -67,6 +67,7 @@ type ChatComposerSectionProps = {
   onSendMessage: (event: FormEvent) => void | Promise<void>;
   onSelectAttachmentFiles: (files: File[]) => void;
   onRemovePendingAttachmentAt: (index: number) => void;
+  onRetryPendingAttachmentAt: (index: number) => void;
   onClearPendingAttachment: () => void;
   onSetChatText: (value: string) => void;
   onChatPaste: (event: ClipboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
@@ -74,7 +75,13 @@ type ChatComposerSectionProps = {
   chatText: string;
   mentionCandidates: MentionCandidate[];
   composePreviewImage: string | null;
-  composePendingAttachments: Array<{ name: string; sizeBytes: number }>;
+  composePendingAttachments: Array<{
+    id: string;
+    name: string;
+    sizeBytes: number;
+    uploadState: "queued" | "uploading" | "uploaded" | "failed";
+    uploadProgress: number;
+  }>;
   attachmentInputRef: RefObject<HTMLInputElement>;
   screenContext: string;
 };
@@ -91,6 +98,7 @@ export function ChatComposerSection({
   onSendMessage,
   onSelectAttachmentFiles,
   onRemovePendingAttachmentAt,
+  onRetryPendingAttachmentAt,
   onClearPendingAttachment,
   onSetChatText,
   onChatPaste,
@@ -250,8 +258,11 @@ export function ChatComposerSection({
 
   const normalizedPendingAttachments = useMemo(
     () => (Array.isArray(composePendingAttachments) ? composePendingAttachments : []).map((item) => ({
+      id: asTrimmedString(item?.id),
       name: asTrimmedString(item?.name),
-      sizeBytes: Number(item?.sizeBytes || 0)
+      sizeBytes: Number(item?.sizeBytes || 0),
+      uploadState: (item?.uploadState || "queued") as "queued" | "uploading" | "uploaded" | "failed",
+      uploadProgress: Math.max(0, Math.min(100, Number(item?.uploadProgress || 0)))
     })).filter((item) => item.name.length > 0),
     [composePendingAttachments]
   );
@@ -400,14 +411,37 @@ export function ChatComposerSection({
                   const sizeLabel = Number.isFinite(attachment.sizeBytes) && attachment.sizeBytes > 0
                     ? formatAttachmentSize(attachment.sizeBytes)
                     : "";
+                  const progressLabel = `${Math.max(0, Math.min(100, Math.round(attachment.uploadProgress || 0)))}%`;
+                  const showProgress = attachment.uploadState === "uploading" || attachment.uploadState === "uploaded" || attachment.uploadState === "failed";
+                  const canRetry = attachment.uploadState === "failed";
 
                   return (
-                    <div className="chat-compose-chip" key={`${attachment.name}-${index}`} title={attachment.name}>
+                    <div className="chat-compose-chip" data-upload-state={attachment.uploadState} key={attachment.id || `${attachment.name}-${index}`} title={attachment.name}>
                       <span className="chat-compose-chip-main">
                         <span className="chat-compose-chip-ext">{extensionLabel}</span>
                         <span className="chat-compose-chip-name">{attachment.name}</span>
                         {sizeLabel ? <span className="chat-compose-chip-size">{sizeLabel}</span> : null}
+                        {showProgress ? <span className="chat-compose-chip-progress">{progressLabel}</span> : null}
                       </span>
+                      {showProgress ? (
+                        <span className="chat-compose-chip-progressbar" aria-hidden="true">
+                          <span style={{ width: progressLabel }} />
+                        </span>
+                      ) : null}
+                      {canRetry ? (
+                        <Button
+                          type="button"
+                          className="secondary tiny chat-compose-chip-retry"
+                          onClick={() => {
+                            onRetryPendingAttachmentAt(index);
+                            setComposerStatusText(`${t("chat.retryUpload")}: ${attachment.name}`);
+                          }}
+                          aria-label={t("chat.retryUpload")}
+                          title={t("chat.retryUpload")}
+                        >
+                          <i className="bi bi-arrow-clockwise" aria-hidden="true" />
+                        </Button>
+                      ) : null}
                       <Button
                         type="button"
                         className="secondary tiny chat-compose-chip-remove"

@@ -283,6 +283,7 @@ export function AppWorkspacePanels({
         composePendingAttachments: [],
         onSelectAttachmentFiles: () => {},
         onRemovePendingAttachmentAt: () => {},
+        onRetryPendingAttachmentAt: () => {},
         mentionCandidates: [],
         typingUsers: [],
         canManageTopicModeration: false,

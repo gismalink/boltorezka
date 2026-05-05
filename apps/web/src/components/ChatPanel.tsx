@@ -74,6 +74,7 @@ export function ChatPanel({
   onSendMessage,
   onSelectAttachmentFiles,
   onRemovePendingAttachmentAt,
+  onRetryPendingAttachmentAt,
   onClearPendingAttachment,
   editingMessageId,
   replyingToMessage,
@@ -849,6 +850,7 @@ export function ChatPanel({
         onSendMessage={onSendMessage}
         onSelectAttachmentFiles={onSelectAttachmentFiles}
         onRemovePendingAttachmentAt={onRemovePendingAttachmentAt}
+        onRetryPendingAttachmentAt={onRetryPendingAttachmentAt}
         onClearPendingAttachment={onClearPendingAttachment}
         onSetChatText={onSetChatText}
         onChatPaste={onChatPaste}

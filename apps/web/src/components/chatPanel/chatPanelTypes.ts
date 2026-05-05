@@ -47,7 +47,13 @@ export type ChatPanelProps = {
   loadingOlderMessages: boolean;
   chatText: string;
   composePreviewImageUrl: string | null;
-  composePendingAttachments: Array<{ name: string; sizeBytes: number }>;
+  composePendingAttachments: Array<{
+    id: string;
+    name: string;
+    sizeBytes: number;
+    uploadState: "queued" | "uploading" | "uploaded" | "failed";
+    uploadProgress: number;
+  }>;
   typingUsers: string[];
   chatLogRef: RefObject<HTMLDivElement>;
   onLoadOlderMessages: () => void;
@@ -68,6 +74,7 @@ export type ChatPanelProps = {
   onSendMessage: (event: FormEvent) => void;
   onSelectAttachmentFiles: (files: File[]) => void;
   onRemovePendingAttachmentAt: (index: number) => void;
+  onRetryPendingAttachmentAt: (index: number) => void;
   onClearPendingAttachment: () => void;
   editingMessageId: string | null;
   replyingToMessage: { id: string; userName: string; text: string } | null;

@@ -267,7 +267,59 @@ const withJsonBody = (method: "POST" | "PUT" | "PATCH" | "DELETE", body?: unknow
   ...(typeof body === "undefined" ? {} : { body: JSON.stringify(body) })
 });
 
-async function uploadBinary(path: string, body: Blob, headers: Record<string, string>) {
+type UploadBinaryProgress = {
+  loadedBytes: number;
+  totalBytes: number;
+};
+
+async function uploadBinary(
+  path: string,
+  body: Blob,
+  headers: Record<string, string>,
+  options?: { onProgress?: (progress: UploadBinaryProgress) => void }
+) {
+  const onProgress = options?.onProgress;
+  if (onProgress && typeof XMLHttpRequest !== "undefined") {
+    await new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("PUT", withConfiguredApiOrigin(path));
+      xhr.withCredentials = true;
+      Object.entries(headers || {}).forEach(([key, value]) => {
+        if (typeof value === "string") {
+          xhr.setRequestHeader(key, value);
+        }
+      });
+
+      xhr.upload.onprogress = (event) => {
+        const totalBytes = Number(event.total || body.size || 0);
+        const loadedBytes = Number(event.loaded || 0);
+        onProgress({ loadedBytes, totalBytes });
+      };
+
+      xhr.onerror = () => {
+        reject(new ApiError(0, { error: "NetworkError", message: "Network error during upload" }));
+      };
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve();
+          return;
+        }
+
+        let payload: ApiErrorPayload = {};
+        try {
+          payload = JSON.parse(String(xhr.responseText || "{}")) as ApiErrorPayload;
+        } catch {
+          payload = {};
+        }
+        reject(new ApiError(xhr.status, payload));
+      };
+
+      xhr.send(body);
+    });
+    return;
+  }
+
   const response = await fetch(withConfiguredApiOrigin(path), {
     method: "PUT",
     credentials: "include",
@@ -877,8 +929,12 @@ export const api = {
       token,
       withJsonBody("POST", input)
     ),
-  uploadChatObject: (uploadUrl: string, body: Blob, headers: Record<string, string>) =>
-    uploadBinary(uploadUrl, body, headers),
+  uploadChatObject: (
+    uploadUrl: string,
+    body: Blob,
+    headers: Record<string, string>,
+    options?: { onProgress?: (progress: UploadBinaryProgress) => void }
+  ) => uploadBinary(uploadUrl, body, headers, options),
   chatUploadFinalize: (
     token: string,
     input: {
