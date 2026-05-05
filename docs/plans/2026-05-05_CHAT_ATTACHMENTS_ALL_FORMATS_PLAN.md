@@ -17,6 +17,7 @@ Scope: Расширение вложений чата для room chat и DM: м
   - backup не должен включать файлы больше 25MB;
   - файлы больше 25MB должны храниться только 7 дней;
   - все ключевые лимиты должны быть вынесены в единый конфиг.
+  - для DM нужен отдельный режим передачи файла ("передать", не attachment), без постоянного хранения файла на сервере.
 
 ## 1) Цели
 
@@ -26,6 +27,7 @@ Scope: Расширение вложений чата для room chat и DM: м
   - файлы >25MB автоматически удаляются через 7 дней;
   - backup flow не включает файлы >25MB.
 - Сохранить совместимость существующего API/сообщений и не ломать текущие вложения.
+- Добавить DM P2P file transfer (single-file per transfer session) с явным accept flow и отдельной нижней панелью сессий.
 
 ## 2) Workstreams
 
@@ -108,13 +110,60 @@ Scope: Расширение вложений чата для room chat и DM: м
 - [ ] Обновить ops runbooks: upload limits, retention cleanup, backup filter.
 - [ ] Добавить migration note для уже существующих вложений и rollback steps.
 
+### 2.8 DM P2P transfer (без хранения файла на сервере)
+
+- [ ] Ввести новый тип действия в DM: `file_transfer.offer` (не attachment сообщения).
+- [ ] Передача одного файла за одну сессию transfer:
+  - отправитель выбирает файл и отправляет offer;
+  - получатель нажимает `Принять`;
+  - получатель выбирает путь сохранения;
+  - после подтверждения стартует передача.
+- [ ] Реализовать сигналинг через существующий realtime канал, payload только metadata/control (без file body).
+- [ ] Передачу данных делать через WebRTC DataChannel (P2P), с fallback на relay (TURN) при невозможности прямого канала.
+- [ ] Не сохранять передаваемый файл в object storage; сервер участвует только в сигналинге/relay трафика.
+- [ ] Добавить контроль целостности (checksum) и статус завершения.
+
+#### 2.8.1 UX: новая нижняя панель передачи в DM (по референсу)
+
+- [ ] В DM добавить отдельную нижнюю панель под composer (`p2p transfer rail`), не смешивая с attach chips.
+- [ ] Содержимое панели:
+  - слева индикатор активных сессий (`P2P-<count>`);
+  - карточки transfer-сессий с filename, размером, статусом и прогрессом;
+  - action-кнопки по состоянию: `Accept`, `Decline`, `Cancel`, `Retry`, `Open folder`.
+- [ ] Статусы карточек:
+  - `waiting for accept`, `accept?`, `preparing`, `transferring`, `paused`, `failed`, `transferred`, `canceled`.
+- [ ] Для входящего offer перед стартом показывать confirm и безопасные file metadata (name/size/type/sender).
+- [ ] Desktop-first UX: диалог выбора пути сохранения перед стартом потока.
+- [ ] Mobile/web fallback: если прямой выбор пути недоступен, использовать download flow с системным сохранением.
+
+#### 2.8.2 Техническая реализация (этапы)
+
+- [ ] MVP (DM only):
+  - single-file transfer;
+  - online-to-online;
+  - без resume, с базовым retry на handshake.
+- [ ] Hardening:
+  - chunked transfer + backpressure;
+  - resume from offset после обрыва;
+  - rate limiting и timeout политики;
+  - метрики длительности/ошибок/успешности.
+- [ ] Security:
+  - anti-spam/rate limits на offers;
+  - лимиты concurrent transfer per user/DM;
+  - валидация metadata и безопасный рендер filename.
+- [ ] Out of scope для первой версии:
+  - group one-to-many fan-out transfer;
+  - offline delivery;
+  - multi-file в одной transfer-сессии.
+
 ## 3) Приоритеты
 
 1. P0: Backend+Frontend multi-file upload с прогрессом и pre-send удалением.
 2. P0: Единый конфиг лимитов + лимит 1GB.
 3. P1: Retention cleanup для >25MB (7 дней).
 4. P1: Backup policy для файлов <=25MB.
-5. P2: Расширенная observability и отчеты.
+5. P1: DM P2P transfer rail + single-file direct transfer.
+6. P2: Расширенная observability и отчеты.
 
 ## 4) Acceptance criteria
 
@@ -128,6 +177,10 @@ Scope: Расширение вложений чата для room chat и DM: м
 - [ ] Backup flow не включает файлы >25MB.
 - [ ] Все лимиты вынесены в единый конфиг и задокументированы.
 - [ ] Smoke test для test/prod проходит без регрессий отправки сообщений и вложений.
+- [ ] В DM доступен новый action `Передать файл` (не attachment).
+- [ ] Получатель подтверждает прием и выбирает путь сохранения до старта передачи.
+- [ ] В DM нижняя панель передачи отображает активные/завершенные transfer-сессии и их статусы.
+- [ ] Файл не сохраняется в server object storage; transfer работает через signaling + p2p/relay.
 
 ## 5) Ограничения выполнения
 
@@ -135,6 +188,7 @@ Scope: Расширение вложений чата для room chat и DM: м
 - До выполнения acceptance в `test` изменения не переходят в `prod`.
 - Изменения API делаются с обратной совместимостью (single-file старый клиент не ломается).
 - Cleanup/backup задачи для удаления объектов запускаются сначала в dry-run.
+- P2P transfer сначала выкатывается только для DM и только под feature-flag.
 
 ## 6) План выполнения (этапы)
 
@@ -156,7 +210,14 @@ Scope: Расширение вложений чата для room chat и DM: м
 5. Stage E: Test rollout
 - Deploy в test, e2e smoke + ручные сценарии (1 файл, N файлов, 1GB-1 byte, >1GB, mixed успех/ошибки).
 
-6. Stage F: Prod rollout
+6. Stage F: DM P2P transfer MVP (test)
+- Signaling events + DM transfer rail UI + single-file direct transfer.
+- Ручные сценарии: accept/decline/cancel, sender abort, receiver disconnect, reconnect handshake.
+
+7. Stage G: DM P2P hardening
+- Resume/chunk tuning, retry policies, telemetry, abuse controls.
+
+8. Stage H: Prod rollout
 - Deploy в prod, мониторинг ошибок upload/ws, контроль cleanup/backup job.
 
 ## 7) Риски и смягчение
@@ -167,6 +228,10 @@ Scope: Расширение вложений чата для room chat и DM: м
   - Митигация: dry-run, safety window, логирование delete decisions.
 - Риск: несовместимость старого UI/контракта.
   - Митигация: backward-compatible API и feature-flag rollout.
+- Риск: P2P недоступен у части пользователей из-за NAT/Firewall.
+  - Митигация: TURN relay fallback + явные статусы/ошибки для пользователя.
+- Риск: очень большие transfer без resume приводят к частым срывам.
+  - Митигация: chunked transport, resume from offset, ограничение скорости.
 
 ## 8) Техразбивка по файлам (composer redesign + attachments)
 
@@ -206,6 +271,19 @@ Scope: Расширение вложений чата для room chat и DM: м
 - `docs/operations/*`
   - обновление runbook/checklist для cleanup+backup.
 
+### 8.4 DM P2P transfer (новый этап)
+
+- `apps/web/src/components/dm/*`
+  - новая `transfer rail` панель снизу в DM.
+- `apps/web/src/hooks/realtime/*`
+  - signaling handlers для offer/accept/reject/cancel/progress/completed.
+- `apps/web/src/services/*`
+  - transport manager для WebRTC DataChannel transfer sessions.
+- `apps/api/src/routes/realtime*.ts`
+  - server-side relay signaling событий передачи (без хранения файла).
+- `apps/desktop-electron/*`
+  - диалог выбора пути сохранения и сохранение входящего stream в файл.
+
 ## 9) Execution Notes (итерации)
 
 - Iteration 1 (completed): composer panel redesign foundation
@@ -220,3 +298,7 @@ Scope: Расширение вложений чата для room chat и DM: м
   - реализовано: backend endpoint `/v1/chat/uploads/finalize-batch` + web client integration.
   - реализовано: multi-file send -> single message with multiple attachments.
   - pending: per-file progress UI + retry policy + telemetry.
+- Iteration 4 (planned): DM P2P transfer MVP
+  - signaling protocol + transfer rail UI;
+  - single-file offer/accept/save flow;
+  - direct transfer without object storage persistence.
