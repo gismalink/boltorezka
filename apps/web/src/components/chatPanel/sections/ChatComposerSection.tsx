@@ -110,6 +110,8 @@ export function ChatComposerSection({
   attachmentInputRef,
   screenContext
 }: ChatComposerSectionProps) {
+  const COMPOSER_MIN_ROWS = 2;
+  const COMPOSER_MAX_ROWS = 5;
   const { t, setPreviewImageUrl, formatAttachmentSize } = useChatPanelCtx();
   const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
   const [mentionContext, setMentionContext] = useState<MentionContext | null>(null);
@@ -176,6 +178,27 @@ export function ChatComposerSection({
   }, [mentionCandidates, mentionContext]);
 
   const mentionPickerOpen = mentionContext !== null;
+
+  const autosizeComposerInput = (input: HTMLTextAreaElement | null) => {
+    if (!input) {
+      return;
+    }
+
+    const style = window.getComputedStyle(input);
+    const lineHeight = Number.parseFloat(style.lineHeight || "0") || 20;
+    const paddingTop = Number.parseFloat(style.paddingTop || "0") || 0;
+    const paddingBottom = Number.parseFloat(style.paddingBottom || "0") || 0;
+    const borderTop = Number.parseFloat(style.borderTopWidth || "0") || 0;
+    const borderBottom = Number.parseFloat(style.borderBottomWidth || "0") || 0;
+    const boxExtras = paddingTop + paddingBottom + borderTop + borderBottom;
+    const minHeight = lineHeight * COMPOSER_MIN_ROWS + boxExtras;
+    const maxHeight = lineHeight * COMPOSER_MAX_ROWS + boxExtras;
+
+    input.style.height = "auto";
+    const targetHeight = Math.min(maxHeight, Math.max(minHeight, input.scrollHeight));
+    input.style.height = `${Math.ceil(targetHeight)}px`;
+    input.style.overflowY = input.scrollHeight > maxHeight ? "auto" : "hidden";
+  };
 
   const updateMentionContext = (value: string, caret: number) => {
     if (!hasActiveRoom || activeTopicIsArchived) {
@@ -255,6 +278,10 @@ export function ChatComposerSection({
     setMentionContext(null);
     setMentionSelectedIndex(0);
   }, [activeTopicIsArchived, hasActiveRoom]);
+
+  useEffect(() => {
+    autosizeComposerInput(messageInputRef.current);
+  }, [chatText]);
 
   const normalizedPendingAttachments = useMemo(
     () => (Array.isArray(composePendingAttachments) ? composePendingAttachments : []).map((item) => ({
@@ -483,6 +510,7 @@ export function ChatComposerSection({
                   onChange={(event) => {
                     const target = event.target;
                     onSetChatText(target.value);
+                    autosizeComposerInput(target);
                     const caret = typeof target.selectionStart === "number" ? target.selectionStart : target.value.length;
                     updateMentionContext(target.value, caret);
                   }}
@@ -538,7 +566,7 @@ export function ChatComposerSection({
                     const caret = typeof target.selectionStart === "number" ? target.selectionStart : target.value.length;
                     updateMentionContext(target.value, caret);
                   }}
-                  rows={3}
+                  rows={2}
                   placeholder={hasActiveRoom ? (activeTopicIsArchived ? t("chat.topicArchivedReadOnly") : t("chat.typePlaceholder")) : t("chat.selectChannelPlaceholder")}
                   disabled={!hasActiveRoom || activeTopicIsArchived}
                   aria-label={t("chat.composeAria")}
