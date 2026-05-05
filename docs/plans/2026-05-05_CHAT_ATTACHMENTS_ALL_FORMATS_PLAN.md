@@ -208,13 +208,15 @@ Scope: Расширение вложений чата для room chat и DM: м
 
 ## 9) Execution Notes (итерации)
 
-- Iteration 1 (in progress): composer panel redesign foundation
+- Iteration 1 (completed): composer panel redesign foundation
   - новая структура панели;
   - chips-строка и кнопки attach/send;
   - без batch upload (single pending attachment flow остается совместимым).
-- Iteration 2: multi-file state + chips actions
+- Iteration 2 (completed): multi-file state + chips actions
   - переход с single pending file на queue.
   - реализовано: multiple file picker, queue chips, remove per chip.
   - текущий transitional send behavior: отправляется первый файл из очереди за submit.
-- Iteration 3: upload progress + retries + batch finalize
-  - UI/transport/API синхронно.
+- Iteration 3 (in progress): upload progress + retries + batch finalize
+  - реализовано: backend endpoint `/v1/chat/uploads/finalize-batch` + web client integration.
+  - реализовано: multi-file send -> single message with multiple attachments.
+  - pending: per-file progress UI + retry policy + telemetry.
