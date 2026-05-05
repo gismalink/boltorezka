@@ -362,6 +362,11 @@ export type ChatUploadFinalizeResponse = {
   attachment: MessageAttachmentRow;
 };
 
+export type ChatUploadFinalizeBatchResponse = {
+  message: RoomMessageRow;
+  attachments: MessageAttachmentRow[];
+};
+
 export type ServerListItem = {
   id: string;
   slug: string;

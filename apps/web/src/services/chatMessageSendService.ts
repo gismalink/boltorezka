@@ -19,6 +19,26 @@ import {
 } from "./chatTransportCommands";
 import { getErrorCode } from "./chatErrorUtils";
 import { extractImageSourceFromClipboardText } from "../utils/chatImagePayload";
+import { trackClientEvent } from "../telemetry";
+
+export type PendingAttachmentUploadStatus = "queued" | "uploading" | "uploaded" | "failed";
+
+export type PendingAttachmentProgressEvent = {
+  fileKey: string;
+  status: PendingAttachmentUploadStatus;
+  progress: number;
+};
+
+function buildPendingAttachmentFileKey(file: Pick<File, "name" | "size" | "lastModified">): string {
+  return `${String(file.name || "")}:${Number(file.size || 0)}:${Number(file.lastModified || 0)}`;
+}
+
+function nowMs(): number {
+  if (typeof performance !== "undefined" && typeof performance.now === "function") {
+    return performance.now();
+  }
+  return Date.now();
+}
 
 type SendChatMessageParams = {
   authToken: string;
@@ -29,7 +49,8 @@ type SendChatMessageParams = {
   mentionUserIds: string[];
   editingMessageId: string | null;
   pendingChatImageDataUrl: string | null;
-  pendingChatAttachmentFile: File | null;
+  pendingChatAttachmentFiles: File[];
+  onAttachmentProgress?: (event: PendingAttachmentProgressEvent) => void;
   user: User | null;
   maxChatRetries: number;
   maxDataUrlLength: number;
@@ -58,7 +79,8 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<Se
     mentionUserIds,
     editingMessageId,
     pendingChatImageDataUrl,
-    pendingChatAttachmentFile,
+    pendingChatAttachmentFiles,
+    onAttachmentProgress,
     user,
     maxChatRetries,
     maxDataUrlLength,
@@ -158,37 +180,127 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<Se
     }
   }
 
-  if (pendingChatAttachmentFile) {
+  if (Array.isArray(pendingChatAttachmentFiles) && pendingChatAttachmentFiles.length > 0) {
     try {
-      const mimeType = String(pendingChatAttachmentFile.type || "application/octet-stream").trim().toLowerCase();
-      const sizeBytes = Number(pendingChatAttachmentFile.size || 0);
-      if (!mimeType || sizeBytes <= 0) {
+      const queuedFiles = pendingChatAttachmentFiles.filter((item): item is File => {
+        if (!item || typeof item !== "object") {
+          return false;
+        }
+        const size = Number((item as { size?: number }).size || 0);
+        return Number.isFinite(size) && size > 0;
+      });
+      if (queuedFiles.length === 0) {
         return { kind: "server-error" };
       }
 
-      const initUpload = await api.chatUploadInit(authToken, {
+      const finalizedUploads: Array<{
+        fileKey: string;
+        uploadId: string;
+        storageKey: string;
+        mimeType: string;
+        sizeBytes: number;
+      }> = [];
+
+      const fileKeys = queuedFiles.map((file) => buildPendingAttachmentFileKey(file));
+      fileKeys.forEach((fileKey) => onAttachmentProgress?.({ fileKey, status: "queued", progress: 0 }));
+
+      for (const file of queuedFiles) {
+        const fileKey = buildPendingAttachmentFileKey(file);
+        const mimeType = String(file.type || "application/octet-stream").trim().toLowerCase();
+        const sizeBytes = Number(file.size || 0);
+        if (!mimeType || sizeBytes <= 0) {
+          onAttachmentProgress?.({ fileKey, status: "failed", progress: 0 });
+          return { kind: "server-error" };
+        }
+
+        onAttachmentProgress?.({ fileKey, status: "uploading", progress: 5 });
+
+        const initStartedAt = nowMs();
+        const initUpload = await api.chatUploadInit(authToken, {
+          roomSlug: chatRoomSlug,
+          topicId: activeTopicId || undefined,
+          mimeType,
+          sizeBytes
+        });
+        trackClientEvent("chat.upload.init.ok", {
+          mode: "batch",
+          fileKey,
+          mimeType,
+          sizeBytes,
+          durationMs: Math.max(0, Math.round(nowMs() - initStartedAt))
+        }, authToken);
+
+        onAttachmentProgress?.({ fileKey, status: "uploading", progress: 12 });
+
+        const putStartedAt = nowMs();
+        await api.uploadChatObject(
+          initUpload.uploadUrl,
+          file,
+          initUpload.requiredHeaders || { "content-type": mimeType },
+          {
+            onProgress: ({ loadedBytes, totalBytes }) => {
+              const safeTotal = Math.max(1, Number(totalBytes || sizeBytes || 1));
+              const ratio = Math.max(0, Math.min(1, Number(loadedBytes || 0) / safeTotal));
+              const progress = Math.round(12 + ratio * 78);
+              onAttachmentProgress?.({ fileKey, status: "uploading", progress });
+            }
+          }
+        );
+        trackClientEvent("chat.upload.put.ok", {
+          mode: "batch",
+          fileKey,
+          mimeType,
+          sizeBytes,
+          durationMs: Math.max(0, Math.round(nowMs() - putStartedAt))
+        }, authToken);
+
+        onAttachmentProgress?.({ fileKey, status: "uploading", progress: 92 });
+
+        finalizedUploads.push({
+          fileKey,
+          uploadId: initUpload.uploadId,
+          storageKey: initUpload.storageKey,
+          mimeType,
+          sizeBytes
+        });
+      }
+
+      const finalizeStartedAt = nowMs();
+      await api.chatUploadFinalizeBatch(authToken, {
         roomSlug: chatRoomSlug,
         topicId: activeTopicId || undefined,
-        mimeType,
-        sizeBytes
-      });
-
-      await api.uploadChatObject(initUpload.uploadUrl, pendingChatAttachmentFile, initUpload.requiredHeaders || { "content-type": mimeType });
-
-      await api.chatUploadFinalize(authToken, {
-        uploadId: initUpload.uploadId,
-        roomSlug: chatRoomSlug,
-        topicId: activeTopicId || undefined,
-        storageKey: initUpload.storageKey,
-        mimeType,
-        sizeBytes,
         text: baseText,
-        mentionUserIds
+        mentionUserIds,
+        uploads: finalizedUploads.map((item) => ({
+          uploadId: item.uploadId,
+          storageKey: item.storageKey,
+          mimeType: item.mimeType,
+          sizeBytes: item.sizeBytes
+        }))
+      });
+      trackClientEvent("chat.upload.finalize_batch.ok", {
+        uploadCount: finalizedUploads.length,
+        withText: baseText.length > 0,
+        durationMs: Math.max(0, Math.round(nowMs() - finalizeStartedAt))
+      }, authToken);
+
+      finalizedUploads.forEach((item) => {
+        onAttachmentProgress?.({ fileKey: item.fileKey, status: "uploaded", progress: 100 });
       });
 
       return { kind: "sent", mode: "upload" };
     } catch (error) {
+      pendingChatAttachmentFiles.forEach((file) => {
+        const fileKey = buildPendingAttachmentFileKey(file);
+        onAttachmentProgress?.({ fileKey, status: "failed", progress: 0 });
+      });
+
       const code = getErrorCode(error);
+      trackClientEvent("chat.upload.batch.failed", {
+        code,
+        uploadCount: pendingChatAttachmentFiles.length,
+        message: (error as Error)?.message || "unknown"
+      }, authToken);
       if (code === "UnsupportedMimeType") {
         return { kind: "attachment-unsupported-type" };
       }

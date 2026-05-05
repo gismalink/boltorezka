@@ -65,7 +65,9 @@ type ChatComposerSectionProps = {
   onCancelReply: () => void;
   onCancelQuote: () => void;
   onSendMessage: (event: FormEvent) => void | Promise<void>;
-  onSelectAttachmentFile: (file: File | null) => void;
+  onSelectAttachmentFiles: (files: File[]) => void;
+  onRemovePendingAttachmentAt: (index: number) => void;
+  onRetryPendingAttachmentAt: (index: number) => void;
   onClearPendingAttachment: () => void;
   onSetChatText: (value: string) => void;
   onChatPaste: (event: ClipboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
@@ -73,7 +75,13 @@ type ChatComposerSectionProps = {
   chatText: string;
   mentionCandidates: MentionCandidate[];
   composePreviewImage: string | null;
-  composePendingAttachmentName: string | null;
+  composePendingAttachments: Array<{
+    id: string;
+    name: string;
+    sizeBytes: number;
+    uploadState: "queued" | "uploading" | "uploaded" | "failed";
+    uploadProgress: number;
+  }>;
   attachmentInputRef: RefObject<HTMLInputElement>;
   screenContext: string;
 };
@@ -88,7 +96,9 @@ export function ChatComposerSection({
   onCancelReply,
   onCancelQuote,
   onSendMessage,
-  onSelectAttachmentFile,
+  onSelectAttachmentFiles,
+  onRemovePendingAttachmentAt,
+  onRetryPendingAttachmentAt,
   onClearPendingAttachment,
   onSetChatText,
   onChatPaste,
@@ -96,11 +106,11 @@ export function ChatComposerSection({
   chatText,
   mentionCandidates,
   composePreviewImage,
-  composePendingAttachmentName,
+  composePendingAttachments,
   attachmentInputRef,
   screenContext
 }: ChatComposerSectionProps) {
-  const { t, setPreviewImageUrl } = useChatPanelCtx();
+  const { t, setPreviewImageUrl, formatAttachmentSize } = useChatPanelCtx();
   const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
   const [mentionContext, setMentionContext] = useState<MentionContext | null>(null);
   const [mentionSelectedIndex, setMentionSelectedIndex] = useState(0);
@@ -246,6 +256,19 @@ export function ChatComposerSection({
     setMentionSelectedIndex(0);
   }, [activeTopicIsArchived, hasActiveRoom]);
 
+  const normalizedPendingAttachments = useMemo(
+    () => (Array.isArray(composePendingAttachments) ? composePendingAttachments : []).map((item) => ({
+      id: asTrimmedString(item?.id),
+      name: asTrimmedString(item?.name),
+      sizeBytes: Number(item?.sizeBytes || 0),
+      uploadState: (item?.uploadState || "queued") as "queued" | "uploading" | "uploaded" | "failed",
+      uploadProgress: Math.max(0, Math.min(100, Number(item?.uploadProgress || 0)))
+    })).filter((item) => item.name.length > 0),
+    [composePendingAttachments]
+  );
+
+  const hasPendingComposerAttachment = Boolean(normalizedPendingAttachments.length > 0 || composePreviewImage);
+
   useEffect(() => {
     if (!hasActiveRoom) {
       setComposerStatusText(t("chat.selectChannelPlaceholder"));
@@ -263,7 +286,7 @@ export function ChatComposerSection({
   return (
     <>
       <form
-        className="chat-compose mt-3 flex items-end gap-3"
+        className="chat-compose chat-compose-modern mt-3"
         onSubmit={async (event) => {
           if (!hasActiveRoom || activeTopicIsArchived) {
             event.preventDefault();
@@ -278,7 +301,7 @@ export function ChatComposerSection({
           }
 
           const hasText = asTrimmedString(chatText).length > 0;
-          const hasAttachment = Boolean(composePendingAttachmentName || composePreviewImage);
+          const hasAttachment = Boolean(normalizedPendingAttachments.length > 0 || composePreviewImage);
           if (!hasText && !hasAttachment) {
             event.preventDefault();
             setComposerStatusText(buildChatAgentStatus("send", "failed", CHAT_AGENT_FAILURE_REASONS.emptyMessage));
@@ -311,25 +334,15 @@ export function ChatComposerSection({
           type="file"
           className="hidden"
           onChange={(event) => {
-            const file = event.currentTarget.files?.[0] || null;
-            onSelectAttachmentFile(file);
+            const files = Array.from(event.currentTarget.files || []);
+            onSelectAttachmentFiles(files);
             event.currentTarget.value = "";
-            setComposerStatusText(file ? `${t("chat.attach")}: ${file.name}` : `${t("chat.attach")}: cleared`);
+            setComposerStatusText(files.length > 0 ? `${t("chat.attach")}: ${files.length}` : `${t("chat.attach")}: cleared`);
           }}
-          accept="image/*,audio/*,.pdf,.txt,.csv,.zip"
+          multiple
+          accept="image/*,audio/*,.pdf,.txt,.md,.csv,.zip,.rar,.7z,.tar,.gz,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.rtf,.exe,.dmg"
           data-agent-id={CHAT_AGENT_IDS.composerAttachmentInput}
         />
-        <Button
-          type="button"
-          className="secondary"
-          onClick={() => attachmentInputRef.current?.click()}
-          disabled={!hasActiveRoom || activeTopicIsArchived}
-          aria-label={t("chat.attach")}
-          title={t("chat.attach")}
-          data-agent-id={CHAT_AGENT_IDS.composerAttach}
-        >
-          <i className="bi bi-paperclip" aria-hidden="true" />
-        </Button>
         <div className="chat-compose-input-stack">
           {editingMessageId ? (
             <div className="chat-edit-banner chat-compose-context-banner flex items-center justify-between gap-3">
@@ -361,144 +374,223 @@ export function ChatComposerSection({
               <Button type="button" className="secondary tiny" onClick={onCancelQuote}>{t("chat.cancelQuote")}</Button>
             </div>
           ) : null}
-          <div className="chat-compose-editor-shell">
-            <textarea
-              ref={messageInputRef}
-              value={chatText}
-              data-agent-id={CHAT_AGENT_IDS.composerInput}
-              data-agent-state={!hasActiveRoom || activeTopicIsArchived ? "disabled" : "active"}
-              onChange={(event) => {
-                const target = event.target;
-                onSetChatText(target.value);
-                const caret = typeof target.selectionStart === "number" ? target.selectionStart : target.value.length;
-                updateMentionContext(target.value, caret);
-              }}
-              onPaste={onChatPaste}
-              onKeyDown={(event) => {
-              if (mentionPickerOpen && mentionSuggestions.length > 0) {
-                if (event.key === "ArrowDown") {
-                  event.preventDefault();
-                  setMentionSelectedIndex((prev) => (prev + 1) % mentionSuggestions.length);
-                  return;
-                }
+          <div className="chat-compose-surface">
+            {hasPendingComposerAttachment ? (
+              <div className="chat-compose-chips" aria-live="polite">
+                {composePreviewImage ? (
+                  <div className="chat-compose-chip" title={t("chat.openImagePreview")}>
+                    <button
+                      type="button"
+                      className="chat-compose-chip-main"
+                      onClick={() => setPreviewImageUrl(composePreviewImage)}
+                      aria-label={t("chat.openImagePreview")}
+                    >
+                      <span className="chat-compose-chip-ext">IMG</span>
+                      <span className="chat-compose-chip-name">{t("chat.attachmentDocument")}</span>
+                    </button>
+                    <Button
+                      type="button"
+                      className="secondary tiny chat-compose-chip-remove"
+                      onClick={() => {
+                        onClearPendingAttachment();
+                        setComposerStatusText(`${t("chat.attach")}: cleared`);
+                      }}
+                      aria-label={t("chat.clearAttachment")}
+                      title={t("chat.clearAttachment")}
+                      data-agent-id={CHAT_AGENT_IDS.composerAttachmentClear}
+                    >
+                      ×
+                    </Button>
+                  </div>
+                ) : null}
+                {normalizedPendingAttachments.map((attachment, index) => {
+                  const dotIndex = attachment.name.lastIndexOf(".");
+                  const extensionLabel = dotIndex < 0 || dotIndex === attachment.name.length - 1
+                    ? "FILE"
+                    : attachment.name.slice(dotIndex).toLowerCase();
+                  const sizeLabel = Number.isFinite(attachment.sizeBytes) && attachment.sizeBytes > 0
+                    ? formatAttachmentSize(attachment.sizeBytes)
+                    : "";
+                  const progressLabel = `${Math.max(0, Math.min(100, Math.round(attachment.uploadProgress || 0)))}%`;
+                  const showProgress = attachment.uploadState === "uploading" || attachment.uploadState === "uploaded" || attachment.uploadState === "failed";
+                  const canRetry = attachment.uploadState === "failed";
 
-                if (event.key === "ArrowUp") {
-                  event.preventDefault();
-                  setMentionSelectedIndex((prev) => (prev - 1 + mentionSuggestions.length) % mentionSuggestions.length);
-                  return;
-                }
-
-                if ((event.key === "Enter" || event.key === "Tab") && !event.shiftKey) {
-                  event.preventDefault();
-                  const selectedCandidate = mentionSuggestions[Math.max(0, Math.min(mentionSelectedIndex, mentionSuggestions.length - 1))];
-                  if (selectedCandidate) {
-                    applyMentionCandidate(selectedCandidate);
-                  }
-                  return;
-                }
-              }
-
-              if (event.key === "Escape" && mentionPickerOpen) {
-                event.preventDefault();
-                setMentionContext(null);
-                return;
-              }
-
-                onChatInputKeyDown(event);
-
-                if (event.defaultPrevented) {
-                  return;
-                }
-
-                window.requestAnimationFrame(() => {
-                  const input = messageInputRef.current;
-                  if (!input) {
-                    return;
-                  }
-
-                  const caret = typeof input.selectionStart === "number" ? input.selectionStart : input.value.length;
-                  updateMentionContext(input.value, caret);
-                });
-              }}
-              onClick={(event) => {
-                const target = event.currentTarget;
-                const caret = typeof target.selectionStart === "number" ? target.selectionStart : target.value.length;
-                updateMentionContext(target.value, caret);
-              }}
-              rows={2}
-              placeholder={hasActiveRoom ? (activeTopicIsArchived ? t("chat.topicArchivedReadOnly") : t("chat.typePlaceholder")) : t("chat.selectChannelPlaceholder")}
-              disabled={!hasActiveRoom || activeTopicIsArchived}
-              aria-label={t("chat.composeAria")}
-              aria-describedby="chat-compose-context"
-              aria-controls={mentionPickerOpen ? mentionListboxId : undefined}
-              aria-expanded={mentionPickerOpen}
-            />
-            {mentionPickerOpen ? (
-              <div
-                className="chat-mention-picker"
-                id={mentionListboxId}
-                role="listbox"
-                aria-label={t("chat.mentionSuggestionsAria")}
-                data-agent-id={CHAT_AGENT_IDS.composerMentionPicker}
-              >
-                {mentionSuggestions.length > 0 ? mentionSuggestions.map((candidate, index) => (
-                  <button
-                    key={candidate.key}
-                    type="button"
-                    className={`chat-mention-picker-item ${index === mentionSelectedIndex ? "chat-mention-picker-item-active" : ""}`}
-                    role="option"
-                    aria-selected={index === mentionSelectedIndex}
-                    data-agent-id={chatAgentMentionOptionId(candidate.handle)}
-                    onMouseDown={(event) => {
-                      event.preventDefault();
-                      applyMentionCandidate(candidate);
-                    }}
-                  >
-                    <span className="chat-mention-picker-name">{candidate.label}</span>
-                    <span className="chat-mention-picker-username">@{candidate.handle}</span>
-                    {candidate.subtitle ? <span className="chat-mention-picker-subtitle">{candidate.subtitle}</span> : null}
-                  </button>
-                )) : (
-                  <div className="chat-mention-picker-empty">{t("chat.mentionNoMatches")}</div>
-                )}
+                  return (
+                    <div className="chat-compose-chip" data-upload-state={attachment.uploadState} key={attachment.id || `${attachment.name}-${index}`} title={attachment.name}>
+                      <span className="chat-compose-chip-main">
+                        <span className="chat-compose-chip-ext">{extensionLabel}</span>
+                        <span className="chat-compose-chip-name">{attachment.name}</span>
+                        {sizeLabel ? <span className="chat-compose-chip-size">{sizeLabel}</span> : null}
+                        {showProgress ? <span className="chat-compose-chip-progress">{progressLabel}</span> : null}
+                      </span>
+                      {showProgress ? (
+                        <span className="chat-compose-chip-progressbar" aria-hidden="true">
+                          <span style={{ width: progressLabel }} />
+                        </span>
+                      ) : null}
+                      {canRetry ? (
+                        <Button
+                          type="button"
+                          className="secondary tiny chat-compose-chip-retry"
+                          onClick={() => {
+                            onRetryPendingAttachmentAt(index);
+                            setComposerStatusText(`${t("chat.retryUpload")}: ${attachment.name}`);
+                          }}
+                          aria-label={t("chat.retryUpload")}
+                          title={t("chat.retryUpload")}
+                        >
+                          <i className="bi bi-arrow-clockwise" aria-hidden="true" />
+                        </Button>
+                      ) : null}
+                      <Button
+                        type="button"
+                        className="secondary tiny chat-compose-chip-remove"
+                        onClick={() => {
+                          onRemovePendingAttachmentAt(index);
+                          setComposerStatusText(`${t("chat.attach")}: cleared`);
+                        }}
+                        aria-label={t("chat.clearAttachment")}
+                        title={t("chat.clearAttachment")}
+                        data-agent-id={CHAT_AGENT_IDS.composerAttachmentClear}
+                      >
+                        ×
+                      </Button>
+                    </div>
+                  );
+                })}
               </div>
             ) : null}
+
+            <div className="chat-compose-main-row">
+              <Button
+                type="button"
+                className="secondary chat-compose-attach-btn"
+                onClick={() => attachmentInputRef.current?.click()}
+                disabled={!hasActiveRoom || activeTopicIsArchived}
+                aria-label={t("chat.attach")}
+                title={t("chat.attach")}
+                data-agent-id={CHAT_AGENT_IDS.composerAttach}
+              >
+                <i className="bi bi-paperclip" aria-hidden="true" />
+              </Button>
+
+              <div className="chat-compose-editor-shell">
+                <textarea
+                  ref={messageInputRef}
+                  value={chatText}
+                  data-agent-id={CHAT_AGENT_IDS.composerInput}
+                  data-agent-state={!hasActiveRoom || activeTopicIsArchived ? "disabled" : "active"}
+                  onChange={(event) => {
+                    const target = event.target;
+                    onSetChatText(target.value);
+                    const caret = typeof target.selectionStart === "number" ? target.selectionStart : target.value.length;
+                    updateMentionContext(target.value, caret);
+                  }}
+                  onPaste={onChatPaste}
+                  onKeyDown={(event) => {
+                    if (mentionPickerOpen && mentionSuggestions.length > 0) {
+                      if (event.key === "ArrowDown") {
+                        event.preventDefault();
+                        setMentionSelectedIndex((prev) => (prev + 1) % mentionSuggestions.length);
+                        return;
+                      }
+
+                      if (event.key === "ArrowUp") {
+                        event.preventDefault();
+                        setMentionSelectedIndex((prev) => (prev - 1 + mentionSuggestions.length) % mentionSuggestions.length);
+                        return;
+                      }
+
+                      if ((event.key === "Enter" || event.key === "Tab") && !event.shiftKey) {
+                        event.preventDefault();
+                        const selectedCandidate = mentionSuggestions[Math.max(0, Math.min(mentionSelectedIndex, mentionSuggestions.length - 1))];
+                        if (selectedCandidate) {
+                          applyMentionCandidate(selectedCandidate);
+                        }
+                        return;
+                      }
+                    }
+
+                    if (event.key === "Escape" && mentionPickerOpen) {
+                      event.preventDefault();
+                      setMentionContext(null);
+                      return;
+                    }
+
+                    onChatInputKeyDown(event);
+
+                    if (event.defaultPrevented) {
+                      return;
+                    }
+
+                    window.requestAnimationFrame(() => {
+                      const input = messageInputRef.current;
+                      if (!input) {
+                        return;
+                      }
+
+                      const caret = typeof input.selectionStart === "number" ? input.selectionStart : input.value.length;
+                      updateMentionContext(input.value, caret);
+                    });
+                  }}
+                  onClick={(event) => {
+                    const target = event.currentTarget;
+                    const caret = typeof target.selectionStart === "number" ? target.selectionStart : target.value.length;
+                    updateMentionContext(target.value, caret);
+                  }}
+                  rows={3}
+                  placeholder={hasActiveRoom ? (activeTopicIsArchived ? t("chat.topicArchivedReadOnly") : t("chat.typePlaceholder")) : t("chat.selectChannelPlaceholder")}
+                  disabled={!hasActiveRoom || activeTopicIsArchived}
+                  aria-label={t("chat.composeAria")}
+                  aria-describedby="chat-compose-context"
+                  aria-controls={mentionPickerOpen ? mentionListboxId : undefined}
+                  aria-expanded={mentionPickerOpen}
+                />
+                {mentionPickerOpen ? (
+                  <div
+                    className="chat-mention-picker"
+                    id={mentionListboxId}
+                    role="listbox"
+                    aria-label={t("chat.mentionSuggestionsAria")}
+                    data-agent-id={CHAT_AGENT_IDS.composerMentionPicker}
+                  >
+                    {mentionSuggestions.length > 0 ? mentionSuggestions.map((candidate, index) => (
+                      <button
+                        key={candidate.key}
+                        type="button"
+                        className={`chat-mention-picker-item ${index === mentionSelectedIndex ? "chat-mention-picker-item-active" : ""}`}
+                        role="option"
+                        aria-selected={index === mentionSelectedIndex}
+                        data-agent-id={chatAgentMentionOptionId(candidate.handle)}
+                        onMouseDown={(event) => {
+                          event.preventDefault();
+                          applyMentionCandidate(candidate);
+                        }}
+                      >
+                        <span className="chat-mention-picker-name">{candidate.label}</span>
+                        <span className="chat-mention-picker-username">@{candidate.handle}</span>
+                        {candidate.subtitle ? <span className="chat-mention-picker-subtitle">{candidate.subtitle}</span> : null}
+                      </button>
+                    )) : (
+                      <div className="chat-mention-picker-empty">{t("chat.mentionNoMatches")}</div>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+
+              <Button
+                type="submit"
+                className="chat-compose-send-btn"
+                disabled={!hasActiveRoom || activeTopicIsArchived}
+                data-agent-id={CHAT_AGENT_IDS.composerSubmit}
+                aria-label={editingMessageId ? t("chat.saveEdit") : t("chat.send")}
+                title={editingMessageId ? t("chat.saveEdit") : t("chat.send")}
+              >
+                {editingMessageId ? t("chat.saveEdit") : <i className="bi bi-send-fill" aria-hidden="true" />}
+              </Button>
+            </div>
           </div>
         </div>
-        {composePreviewImage ? (
-          <Button
-            type="button"
-            className="chat-compose-thumb-btn"
-            onClick={() => setPreviewImageUrl(composePreviewImage)}
-            aria-label={t("chat.openImagePreview")}
-            title={t("chat.openImagePreview")}
-          >
-            <img
-              src={composePreviewImage}
-              alt="chat-compose-image"
-              className="chat-compose-thumb"
-              loading="lazy"
-            />
-          </Button>
-        ) : null}
-        {composePendingAttachmentName ? (
-          <div className="chat-compose-attachment-pill" title={composePendingAttachmentName}>
-            <span className="chat-compose-attachment-name">{composePendingAttachmentName}</span>
-            <Button
-              type="button"
-              className="secondary tiny"
-              onClick={() => {
-                onClearPendingAttachment();
-                setComposerStatusText(`${t("chat.attach")}: cleared`);
-              }}
-              aria-label={t("chat.clearAttachment")}
-              title={t("chat.clearAttachment")}
-              data-agent-id={CHAT_AGENT_IDS.composerAttachmentClear}
-            >
-              ×
-            </Button>
-          </div>
-        ) : null}
         <div
           id="chat-compose-context"
           className="muted"
@@ -507,7 +599,6 @@ export function ChatComposerSection({
         >
           {screenContext}
         </div>
-        <Button type="submit" disabled={!hasActiveRoom || activeTopicIsArchived} data-agent-id={CHAT_AGENT_IDS.composerSubmit}>{editingMessageId ? t("chat.saveEdit") : <i className="bi bi-send-fill" aria-hidden="true" />}</Button>
       </form>
     </>
   );

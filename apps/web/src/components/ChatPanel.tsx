@@ -60,7 +60,7 @@ export function ChatPanel({
   loadingOlderMessages,
   chatText,
   composePreviewImageUrl,
-  composePendingAttachmentName,
+  composePendingAttachments,
   typingUsers,
   chatLogRef,
   onLoadOlderMessages,
@@ -72,7 +72,9 @@ export function ChatPanel({
   onChatPaste,
   onChatInputKeyDown,
   onSendMessage,
-  onSelectAttachmentFile,
+  onSelectAttachmentFiles,
+  onRemovePendingAttachmentAt,
+  onRetryPendingAttachmentAt,
   onClearPendingAttachment,
   editingMessageId,
   replyingToMessage,
@@ -846,7 +848,9 @@ export function ChatPanel({
         onCancelReply={onCancelReply}
         onCancelQuote={cancelQuote}
         onSendMessage={onSendMessage}
-        onSelectAttachmentFile={onSelectAttachmentFile}
+        onSelectAttachmentFiles={onSelectAttachmentFiles}
+        onRemovePendingAttachmentAt={onRemovePendingAttachmentAt}
+        onRetryPendingAttachmentAt={onRetryPendingAttachmentAt}
         onClearPendingAttachment={onClearPendingAttachment}
         onSetChatText={onSetChatText}
         onChatPaste={onChatPaste}
@@ -854,7 +858,7 @@ export function ChatPanel({
         chatText={chatText}
         mentionCandidates={resolvedMentionCandidates}
         composePreviewImage={composePreviewImage}
-        composePendingAttachmentName={composePendingAttachmentName}
+        composePendingAttachments={composePendingAttachments}
         attachmentInputRef={attachmentInputRef}
         screenContext={chatScreenContext}
       />

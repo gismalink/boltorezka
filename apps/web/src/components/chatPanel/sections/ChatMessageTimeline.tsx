@@ -482,22 +482,40 @@ export function ChatMessageTimeline({
                 {attachmentFiles.length > 0 ? (
                   <div className="chat-attachments-row">
                     {attachmentFiles.map((attachment) => (
-                      <a
-                        key={`${messageVm.id}-${attachment.id}`}
-                        href={attachment.downloadUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="chat-attachment-file"
-                      >
-                        <span className="chat-attachment-file-title">
-                          {attachment.type === "audio" ? t("chat.attachmentAudio") : t("chat.attachmentDocument")}
-                        </span>
-                        <span className="chat-attachment-file-meta">
-                          {attachment.mimeType}
-                          {" · "}
-                          {formatAttachmentSize(attachment.sizeBytes)}
-                        </span>
-                      </a>
+                      attachment.type === "audio" ? (
+                        <div
+                          key={`${messageVm.id}-${attachment.id}`}
+                          className="chat-attachment-file chat-attachment-audio"
+                        >
+                          <span className="chat-attachment-file-title">{t("chat.attachmentAudio")}</span>
+                          <audio
+                            className="chat-attachment-audio-player"
+                            controls
+                            preload="metadata"
+                            src={resolveAttachmentImageUrl(attachment.downloadUrl)}
+                          />
+                          <span className="chat-attachment-file-meta">
+                            {attachment.mimeType}
+                            {" · "}
+                            {formatAttachmentSize(attachment.sizeBytes)}
+                          </span>
+                        </div>
+                      ) : (
+                        <a
+                          key={`${messageVm.id}-${attachment.id}`}
+                          href={attachment.downloadUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="chat-attachment-file"
+                        >
+                          <span className="chat-attachment-file-title">{t("chat.attachmentDocument")}</span>
+                          <span className="chat-attachment-file-meta">
+                            {attachment.mimeType}
+                            {" · "}
+                            {formatAttachmentSize(attachment.sizeBytes)}
+                          </span>
+                        </a>
+                      )
                     ))}
                   </div>
                 ) : null}

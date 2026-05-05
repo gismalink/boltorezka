@@ -46,7 +46,13 @@ type ChatPanelProps = {
   loadingOlderMessages: boolean;
   chatText: string;
   composePreviewImageUrl: string | null;
-  composePendingAttachmentName: string | null;
+  composePendingAttachments: Array<{
+    id: string;
+    name: string;
+    sizeBytes: number;
+    uploadState: "queued" | "uploading" | "uploaded" | "failed";
+    uploadProgress: number;
+  }>;
   typingUsers: string[];
   chatLogRef: React.RefObject<HTMLDivElement>;
   onLoadOlderMessages: () => void;
@@ -65,7 +71,9 @@ type ChatPanelProps = {
   onChatPaste: (event: React.ClipboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   onChatInputKeyDown: (event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   onSendMessage: (event: React.FormEvent) => void;
-  onSelectAttachmentFile: (file: File | null) => void;
+  onSelectAttachmentFiles: (files: File[]) => void;
+  onRemovePendingAttachmentAt: (index: number) => void;
+  onRetryPendingAttachmentAt: (index: number) => void;
   onClearPendingAttachment: () => void;
   editingMessageId: string | null;
   replyingToMessage: { id: string; userName: string; text: string } | null;
@@ -137,7 +145,8 @@ type UseWorkspaceChatVideoPropsInput = {
   loadingOlderMessages: boolean;
   chatText: string;
   pendingChatImageDataUrl: string | null;
-  pendingChatAttachmentFile: File | null;
+  pendingChatAttachmentFiles: File[];
+  pendingChatAttachmentStateByKey: Record<string, { state: "queued" | "uploading" | "uploaded" | "failed"; progress: number }>;
   activeChatTypingUsers: string[];
   chatLogRef: React.RefObject<HTMLDivElement>;
   loadOlderMessages: () => void;
@@ -153,7 +162,9 @@ type UseWorkspaceChatVideoPropsInput = {
   handleChatPaste: (event: React.ClipboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   handleChatInputKeyDown: (event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   sendMessage: (event: React.FormEvent) => void;
-  selectAttachmentFile: (file: File | null) => void;
+  selectAttachmentFiles: (files: File[]) => void;
+  removePendingAttachmentAt: (index: number) => void;
+  retryPendingAttachmentAt: (index: number) => void;
   clearPendingAttachment: () => void;
   editingMessageId: string | null;
   replyingToMessageId: string | null;
@@ -215,7 +226,8 @@ export function useWorkspaceChatVideoProps({
   loadingOlderMessages,
   chatText,
   pendingChatImageDataUrl,
-  pendingChatAttachmentFile,
+  pendingChatAttachmentFiles,
+  pendingChatAttachmentStateByKey,
   activeChatTypingUsers,
   chatLogRef,
   loadOlderMessages,
@@ -225,7 +237,9 @@ export function useWorkspaceChatVideoProps({
   handleChatPaste,
   handleChatInputKeyDown,
   sendMessage,
-  selectAttachmentFile,
+  selectAttachmentFiles,
+  removePendingAttachmentAt,
+  retryPendingAttachmentAt,
   clearPendingAttachment,
   editingMessageId,
   replyingToMessageId,
@@ -355,7 +369,18 @@ export function useWorkspaceChatVideoProps({
     loadingOlderMessages,
     chatText,
     composePreviewImageUrl: pendingChatImageDataUrl,
-    composePendingAttachmentName: pendingChatAttachmentFile ? String(pendingChatAttachmentFile.name || "") : null,
+    composePendingAttachments: (Array.isArray(pendingChatAttachmentFiles) ? pendingChatAttachmentFiles : []).map((file) => {
+      const id = `${String(file?.name || "")}:${Number(file?.size || 0)}:${Number(file?.lastModified || 0)}`;
+      const uploadMeta = pendingChatAttachmentStateByKey[id] || { state: "queued" as const, progress: 0 };
+
+      return {
+        id,
+        name: String(file?.name || ""),
+        sizeBytes: Number(file?.size || 0),
+        uploadState: uploadMeta.state,
+        uploadProgress: Math.max(0, Math.min(100, Number(uploadMeta.progress || 0)))
+      };
+    }).filter((item) => item.name),
     typingUsers: activeChatTypingUsers,
     chatLogRef,
     onLoadOlderMessages: () => void loadOlderMessages(),
@@ -387,7 +412,9 @@ export function useWorkspaceChatVideoProps({
     onChatPaste: handleChatPaste,
     onChatInputKeyDown: handleChatInputKeyDown,
     onSendMessage: sendMessage,
-    onSelectAttachmentFile: selectAttachmentFile,
+    onSelectAttachmentFiles: selectAttachmentFiles,
+    onRemovePendingAttachmentAt: removePendingAttachmentAt,
+    onRetryPendingAttachmentAt: retryPendingAttachmentAt,
     onClearPendingAttachment: clearPendingAttachment,
     editingMessageId,
     replyingToMessage: replyingToMessageId
