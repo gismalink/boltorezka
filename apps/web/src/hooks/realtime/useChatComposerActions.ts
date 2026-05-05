@@ -21,7 +21,6 @@ import {
   type SendWsEventFn
 } from "../../services/chatTransportCommands";
 import {
-  compressImageToDataUrl,
   extractImageSourceFromClipboardHtml,
   extractImageSourceFromClipboardText,
   normalizeImageSource,
@@ -395,23 +394,40 @@ export function useChatComposerActions({
 
     event.preventDefault();
     void (async () => {
+      const appendClipboardImage = (file: File) => {
+        setPendingChatImageDataUrl(null);
+        setPendingChatAttachmentFiles((prev) => {
+          const byIdentity = new Set(prev.map((item) => `${item.name}::${item.size}::${item.lastModified}`));
+          const id = `${file.name}::${file.size}::${file.lastModified}`;
+          if (byIdentity.has(id)) {
+            return prev;
+          }
+          return [...prev, file];
+        });
+        setPendingChatAttachmentStateByKey((prev) => {
+          const next = { ...prev };
+          const key = buildPendingAttachmentFileKey(file);
+          if (!next[key]) {
+            next[key] = {
+              state: "queued",
+              progress: 0
+            };
+          }
+          return next;
+        });
+      };
+
       try {
         if (imageFile) {
-          const dataUrl = await compressImageToDataUrl(imageFile, serverChatImagePolicy);
-          setPendingChatImageDataUrl(dataUrl);
-          setPendingChatAttachmentFiles([]);
-          setPendingChatAttachmentStateByKey({});
+          appendClipboardImage(imageFile);
           return;
         }
 
         if (htmlImageSource.startsWith("data:image/")) {
           const response = await fetch(htmlImageSource);
           const blob = await response.blob();
-          const synthesizedFile = new File([blob], "clipboard-image", { type: blob.type || "image/png" });
-          const dataUrl = await compressImageToDataUrl(synthesizedFile, serverChatImagePolicy);
-          setPendingChatImageDataUrl(dataUrl);
-          setPendingChatAttachmentFiles([]);
-          setPendingChatAttachmentStateByKey({});
+          const synthesizedFile = new File([blob], `clipboard-image-${Date.now()}`, { type: blob.type || "image/png" });
+          appendClipboardImage(synthesizedFile);
           return;
         }
 
@@ -425,11 +441,8 @@ export function useChatComposerActions({
         if (textImageSource.startsWith("data:image/")) {
           const response = await fetch(textImageSource);
           const blob = await response.blob();
-          const synthesizedFile = new File([blob], "clipboard-image", { type: blob.type || "image/png" });
-          const dataUrl = await compressImageToDataUrl(synthesizedFile, serverChatImagePolicy);
-          setPendingChatImageDataUrl(dataUrl);
-          setPendingChatAttachmentFiles([]);
-          setPendingChatAttachmentStateByKey({});
+          const synthesizedFile = new File([blob], `clipboard-image-${Date.now()}`, { type: blob.type || "image/png" });
+          appendClipboardImage(synthesizedFile);
           return;
         }
 
@@ -442,7 +455,6 @@ export function useChatComposerActions({
     chatImageTooLargeMessage,
     chatRoomSlug,
     pushToast,
-    serverChatImagePolicy,
     setPendingChatAttachmentFiles,
     setPendingChatAttachmentStateByKey,
     setPendingChatImageDataUrl

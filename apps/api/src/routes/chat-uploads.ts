@@ -1243,15 +1243,17 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
         }
       }
 
-      const lockAcquired = await fastify.redis.setnx(idemLockKey, idemLockToken);
-      if (lockAcquired !== 1) {
+      const lockAcquired = await fastify.redis.set(idemLockKey, idemLockToken, {
+        NX: true,
+        EX: 30
+      });
+      if (lockAcquired !== "OK") {
         reply.header("Retry-After", "1");
         return reply.code(409).send({
           error: "FinalizeInProgress",
           message: "Finalize request is already being processed"
         });
       }
-      await fastify.redis.expire(idemLockKey, 30);
 
       type PreparedAttachment = {
         uploadId: string;
