@@ -1754,14 +1754,14 @@ pre {
 
 .chat-compose-modern {
   display: grid;
-  gap: var(--space-xs);
+  gap: var(--space-2xs);
 }
 
 .chat-compose-input-stack {
   flex: 1;
   min-width: 0;
   display: grid;
-  gap: var(--space-xs);
+  gap: var(--space-2xs);
 }
 
 .chat-compose-context-banner {
@@ -1770,8 +1770,8 @@ pre {
 
 .chat-compose-surface {
   display: grid;
-  gap: 8px;
-  padding: 10px;
+  gap: 6px;
+  padding: 8px;
   border-radius: 16px;
   border: var(--border-thin) solid color-mix(in srgb, var(--pixel-border) 74%, transparent 26%);
   background:
@@ -1783,12 +1783,12 @@ pre {
   display: grid;
   grid-template-columns: 40px minmax(0, 1fr) 44px;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .chat-compose textarea {
   min-width: 0;
-  min-height: 68px;
+  min-height: 56px;
   max-height: 132px;
   width: 100%;
   padding-left: 12px;
@@ -1842,17 +1842,17 @@ pre {
   gap: 8px;
   width: 100%;
   overflow-x: auto;
-  padding-bottom: 4px;
+  padding-bottom: 2px;
 }
 
 .chat-compose-chip {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
-  gap: 6px;
+  gap: 4px;
   min-width: 60px;
   max-width: min(320px, 84vw);
-  padding: 6px 30px 6px 6px;
+  padding: 4px 30px 4px 6px;
   border-radius: 12px;
   border: var(--border-thin) solid color-mix(in srgb, var(--pixel-neon-cyan) 30%, var(--pixel-border) 70%);
   background: color-mix(in srgb, var(--pixel-panel-2) 84%, var(--pixel-panel) 16%);
@@ -1871,7 +1871,7 @@ pre {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   align-items: start;
-  gap: 3px;
+  gap: 2px;
   min-width: 0;
   border: 0;
   padding: 0;
@@ -4695,7 +4695,7 @@ pre {
   }
 
   .workspace-mobile .chat-compose textarea {
-    min-height: 60px;
+    min-height: 52px;
       max-height: 112px;
   }
 
