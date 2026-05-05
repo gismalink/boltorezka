@@ -538,7 +538,7 @@ export function ChatComposerSection({
                     const caret = typeof target.selectionStart === "number" ? target.selectionStart : target.value.length;
                     updateMentionContext(target.value, caret);
                   }}
-                  rows={2}
+                  rows={3}
                   placeholder={hasActiveRoom ? (activeTopicIsArchived ? t("chat.topicArchivedReadOnly") : t("chat.typePlaceholder")) : t("chat.selectChannelPlaceholder")}
                   disabled={!hasActiveRoom || activeTopicIsArchived}
                   aria-label={t("chat.composeAria")}
