@@ -159,6 +159,8 @@ services:
       LIVEKIT_API_KEY: ${LIVEKIT_TEST_API_KEY:-}
       LIVEKIT_API_SECRET: ${LIVEKIT_TEST_API_SECRET:-}
       LIVEKIT_TOKEN_TTL_SEC: ${TEST_LIVEKIT_TOKEN_TTL_SEC:-1800}
+      CHAT_UPLOAD_MAX_SIZE_BYTES: ${TEST_CHAT_UPLOAD_MAX_SIZE_BYTES:-26214400}
+      CHAT_UPLOAD_ALLOWED_MIME_TYPES: ${TEST_CHAT_UPLOAD_ALLOWED_MIME_TYPES:-image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain,text/csv,application/zip,audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/mp4,audio/x-m4a}
       CHAT_STORAGE_PROVIDER: ${TEST_CHAT_STORAGE_PROVIDER:-localfs}
       CHAT_MINIO_ENDPOINT: http://datowave-minio-test:9000
       CHAT_MINIO_REGION: ${TEST_CHAT_MINIO_REGION:-us-east-1}

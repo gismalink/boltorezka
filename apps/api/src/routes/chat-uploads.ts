@@ -712,9 +712,22 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
       }
 
       if (sizeBytes > config.chatUploadMaxSizeBytes) {
+        request.log.warn(
+          buildUploadAuditContext(request, {
+            event: "chat.upload.init",
+            status: "rejected_too_large",
+            roomSlug,
+            mimeType,
+            sizeBytes,
+            maxSizeBytes: config.chatUploadMaxSizeBytes
+          }),
+          "chat upload rejected by size limit"
+        );
         return reply.code(400).send({
           error: "AttachmentTooLarge",
-          message: "Attachment size exceeds server limit"
+          message: "Attachment size exceeds server limit",
+          sizeBytes,
+          maxSizeBytes: config.chatUploadMaxSizeBytes
         });
       }
 
