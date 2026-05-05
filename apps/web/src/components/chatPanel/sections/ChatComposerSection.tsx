@@ -340,7 +340,7 @@ export function ChatComposerSection({
             setComposerStatusText(files.length > 0 ? `${t("chat.attach")}: ${files.length}` : `${t("chat.attach")}: cleared`);
           }}
           multiple
-          accept="image/*,audio/*,.pdf,.txt,.csv,.zip"
+          accept="image/*,audio/*,.pdf,.txt,.md,.csv,.zip,.rar,.7z,.tar,.gz,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.rtf,.exe,.dmg"
           data-agent-id={CHAT_AGENT_IDS.composerAttachmentInput}
         />
         <div className="chat-compose-input-stack">

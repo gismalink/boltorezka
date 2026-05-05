@@ -447,7 +447,7 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
   fastify.addContentTypeParser(/^(image|audio)\//i, { parseAs: "buffer" }, (_request, body, done) => {
     done(null, body);
   });
-  fastify.addContentTypeParser(/^application\/(pdf|zip|x-zip-compressed|msword|vnd\.|octet-stream|rtf|xml|x-rar-compressed)/i, { parseAs: "buffer" }, (_request, body, done) => {
+  fastify.addContentTypeParser(/^application\/(pdf|zip|x-zip-compressed|x-7z-compressed|x-rar-compressed|vnd\.rar|gzip|x-gzip|x-tar|msword|vnd\.|octet-stream|rtf|xml|x-msdownload|x-apple-diskimage)/i, { parseAs: "buffer" }, (_request, body, done) => {
     done(null, body);
   });
   fastify.addContentTypeParser(/^text\/(plain|csv)/i, { parseAs: "buffer" }, (_request, body, done) => {

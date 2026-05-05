@@ -60,7 +60,7 @@ const chatUploadMaxSizeBytesRaw = Number.parseInt(String(process.env.CHAT_UPLOAD
 const chatUploadInitTtlSecRaw = Number.parseInt(String(process.env.CHAT_UPLOAD_INIT_TTL_SEC || "600"), 10);
 const chatUploadAllowedMimeTypes = parseCsv(
   process.env.CHAT_UPLOAD_ALLOWED_MIME_TYPES
-  || "image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain,text/csv,application/zip,audio/mpeg,audio/wav,audio/ogg,audio/mp4"
+  || "image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain,text/csv,text/markdown,application/zip,application/x-zip-compressed,application/x-7z-compressed,application/x-rar-compressed,application/vnd.rar,application/gzip,application/x-gzip,application/x-tar,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.oasis.opendocument.text,application/vnd.oasis.opendocument.spreadsheet,application/vnd.oasis.opendocument.presentation,application/rtf,audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/mp4,audio/x-m4a,application/x-msdownload,application/vnd.microsoft.portable-executable,application/x-apple-diskimage"
 );
 const chatStorageProvider = toTrimmedLower(process.env.CHAT_STORAGE_PROVIDER || "localfs") === "minio"
   ? "minio"
@@ -127,11 +127,34 @@ export const config: AppConfig = {
       "application/pdf",
       "text/plain",
       "text/csv",
+      "text/markdown",
       "application/zip",
+      "application/x-zip-compressed",
+      "application/x-7z-compressed",
+      "application/x-rar-compressed",
+      "application/vnd.rar",
+      "application/gzip",
+      "application/x-gzip",
+      "application/x-tar",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-powerpoint",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "application/vnd.oasis.opendocument.text",
+      "application/vnd.oasis.opendocument.spreadsheet",
+      "application/vnd.oasis.opendocument.presentation",
+      "application/rtf",
       "audio/mpeg",
+      "audio/mp3",
       "audio/wav",
       "audio/ogg",
-      "audio/mp4"
+      "audio/mp4",
+      "audio/x-m4a",
+      "application/x-msdownload",
+      "application/vnd.microsoft.portable-executable",
+      "application/x-apple-diskimage"
     ],
   chatUploadInitTtlSec: Number.isFinite(chatUploadInitTtlSecRaw) && chatUploadInitTtlSecRaw > 0
     ? chatUploadInitTtlSecRaw
