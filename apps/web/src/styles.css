@@ -1850,12 +1850,13 @@ pre {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
   gap: 6px;
-  min-width: 200px;
+  min-width: 60px;
   max-width: min(320px, 84vw);
-  padding: 5px 6px;
+  padding: 6px 30px 6px 6px;
   border-radius: 12px;
   border: var(--border-thin) solid color-mix(in srgb, var(--pixel-neon-cyan) 30%, var(--pixel-border) 70%);
   background: color-mix(in srgb, var(--pixel-panel-2) 84%, var(--pixel-panel) 16%);
+  position: relative;
 }
 
 .chat-compose-chip[data-upload-state="failed"] {
@@ -1943,9 +1944,9 @@ pre {
 }
 
 .chat-compose-chip-remove {
-  grid-column: 2;
-  grid-row: 1;
-  align-self: start;
+  position: absolute;
+  top: 4px;
+  right: 4px;
   min-width: 24px;
   min-height: 24px;
   padding: 0;
