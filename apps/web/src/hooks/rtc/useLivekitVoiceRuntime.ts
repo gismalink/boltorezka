@@ -157,14 +157,26 @@ const relaxLivekitEmitterLimits = (room: Room, maxListeners = 64) => {
     client?: unknown;
     publisher?: unknown;
     subscriber?: unknown;
-    pcManager?: unknown;
+    pcManager?: {
+      publisher?: unknown;
+      subscriber?: unknown;
+      currentState?: unknown;
+    } | unknown;
   };
+
+  const pcManager = (engine.pcManager && typeof engine.pcManager === "object")
+    ? (engine.pcManager as { publisher?: unknown; subscriber?: unknown })
+    : null;
 
   setEmitterMaxListeners(engine, maxListeners);
   setEmitterMaxListeners(engine.client, maxListeners);
   setEmitterMaxListeners(engine.publisher, maxListeners);
   setEmitterMaxListeners(engine.subscriber, maxListeners);
   setEmitterMaxListeners(engine.pcManager, maxListeners);
+  // LiveKit negotiation listeners (e.g. RTPVideoPayloadTypes) are attached on
+  // PCTransport instances under pcManager, not on pcManager itself.
+  setEmitterMaxListeners(pcManager?.publisher, maxListeners);
+  setEmitterMaxListeners(pcManager?.subscriber, maxListeners);
 };
 
 const isExpectedDisconnectError = (error: unknown): boolean => {

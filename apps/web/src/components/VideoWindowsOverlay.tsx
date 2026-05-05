@@ -115,6 +115,17 @@ function VideoTile({
     <div
       className="video-window"
       onPointerDown={(event) => onDragStart(id, event)}
+      onDoubleClick={() => {
+        if (!isScreenShare) {
+          return;
+        }
+        onOpenScreenFullscreen?.({
+          id,
+          label,
+          stream,
+          mirrored
+        });
+      }}
       style={{
         width: `${layout.width}px`,
         height: `${height}px`,
@@ -594,11 +605,13 @@ export function VideoWindowsOverlay({
             {fullscreenResolution ? (
               <div className="video-screen-fullscreen-resolution">{fullscreenResolution}</div>
             ) : null}
+            <div className="video-screen-fullscreen-hint">{t("video.fullscreenDoubleClickHint")}</div>
             <video
               autoPlay
               playsInline
               muted
               className="chat-image-modal-media video-screen-fullscreen-media"
+              onDoubleClick={() => setFullscreenScreenShare(null)}
               onLoadedMetadata={(event) => updateFullscreenResolution(event.currentTarget)}
               onResize={(event) => updateFullscreenResolution(event.currentTarget)}
               ref={(element) => {
