@@ -84,6 +84,11 @@ export type ChatUploadFinalizeResponse = {
   };
 };
 
+export type ChatUploadFinalizeBatchResponse = {
+  message: RoomMessagesResponse["messages"][number];
+  attachments: ChatUploadFinalizeResponse["attachment"][];
+};
+
 // ─── DM types ───────────────────────────────────────────
 
 export type DmThread = {
@@ -241,7 +246,8 @@ const endpoints = {
   adminServerChatImagePolicy: "/v1/admin/server/chat-image-policy",
   memberPreferences: "/v1/member-preferences",
   chatUploadInit: "/v1/chat/uploads/init",
-  chatUploadFinalize: "/v1/chat/uploads/finalize"
+  chatUploadFinalize: "/v1/chat/uploads/finalize",
+  chatUploadFinalizeBatch: "/v1/chat/uploads/finalize-batch"
 } as const;
 
 const withId = (basePath: string, id: string) => `${basePath}/${encodeURIComponent(id)}`;
@@ -891,6 +897,29 @@ export const api = {
     }
   ) => fetchJson<ChatUploadFinalizeResponse>(
     endpoints.chatUploadFinalize,
+    token,
+    withJsonBody("POST", input)
+  ),
+  chatUploadFinalizeBatch: (
+    token: string,
+    input: {
+      roomSlug: string;
+      topicId?: string;
+      text?: string;
+      mentionUserIds?: string[];
+      uploads: Array<{
+        uploadId: string;
+        storageKey: string;
+        mimeType: string;
+        sizeBytes: number;
+        downloadUrl?: string;
+        width?: number;
+        height?: number;
+        checksum?: string;
+      }>;
+    }
+  ) => fetchJson<ChatUploadFinalizeBatchResponse>(
+    endpoints.chatUploadFinalizeBatch,
     token,
     withJsonBody("POST", input)
   ),

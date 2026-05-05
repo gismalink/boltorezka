@@ -29,7 +29,7 @@ type SendChatMessageParams = {
   mentionUserIds: string[];
   editingMessageId: string | null;
   pendingChatImageDataUrl: string | null;
-  pendingChatAttachmentFile: File | null;
+  pendingChatAttachmentFiles: File[];
   user: User | null;
   maxChatRetries: number;
   maxDataUrlLength: number;
@@ -58,7 +58,7 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<Se
     mentionUserIds,
     editingMessageId,
     pendingChatImageDataUrl,
-    pendingChatAttachmentFile,
+    pendingChatAttachmentFiles,
     user,
     maxChatRetries,
     maxDataUrlLength,
@@ -158,32 +158,56 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<Se
     }
   }
 
-  if (pendingChatAttachmentFile) {
+  if (Array.isArray(pendingChatAttachmentFiles) && pendingChatAttachmentFiles.length > 0) {
     try {
-      const mimeType = String(pendingChatAttachmentFile.type || "application/octet-stream").trim().toLowerCase();
-      const sizeBytes = Number(pendingChatAttachmentFile.size || 0);
-      if (!mimeType || sizeBytes <= 0) {
+      const queuedFiles = pendingChatAttachmentFiles.filter((item): item is File => {
+        if (!item || typeof item !== "object") {
+          return false;
+        }
+        const size = Number((item as { size?: number }).size || 0);
+        return Number.isFinite(size) && size > 0;
+      });
+      if (queuedFiles.length === 0) {
         return { kind: "server-error" };
       }
 
-      const initUpload = await api.chatUploadInit(authToken, {
+      const finalizedUploads: Array<{
+        uploadId: string;
+        storageKey: string;
+        mimeType: string;
+        sizeBytes: number;
+      }> = [];
+
+      for (const file of queuedFiles) {
+        const mimeType = String(file.type || "application/octet-stream").trim().toLowerCase();
+        const sizeBytes = Number(file.size || 0);
+        if (!mimeType || sizeBytes <= 0) {
+          return { kind: "server-error" };
+        }
+
+        const initUpload = await api.chatUploadInit(authToken, {
+          roomSlug: chatRoomSlug,
+          topicId: activeTopicId || undefined,
+          mimeType,
+          sizeBytes
+        });
+
+        await api.uploadChatObject(initUpload.uploadUrl, file, initUpload.requiredHeaders || { "content-type": mimeType });
+
+        finalizedUploads.push({
+          uploadId: initUpload.uploadId,
+          storageKey: initUpload.storageKey,
+          mimeType,
+          sizeBytes
+        });
+      }
+
+      await api.chatUploadFinalizeBatch(authToken, {
         roomSlug: chatRoomSlug,
         topicId: activeTopicId || undefined,
-        mimeType,
-        sizeBytes
-      });
-
-      await api.uploadChatObject(initUpload.uploadUrl, pendingChatAttachmentFile, initUpload.requiredHeaders || { "content-type": mimeType });
-
-      await api.chatUploadFinalize(authToken, {
-        uploadId: initUpload.uploadId,
-        roomSlug: chatRoomSlug,
-        topicId: activeTopicId || undefined,
-        storageKey: initUpload.storageKey,
-        mimeType,
-        sizeBytes,
         text: baseText,
-        mentionUserIds
+        mentionUserIds,
+        uploads: finalizedUploads
       });
 
       return { kind: "sent", mode: "upload" };

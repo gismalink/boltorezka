@@ -15,6 +15,7 @@ import { canBypassRoomSendPolicy } from "../services/room-access-service.js";
 import { isServerAgeConfirmed } from "../services/age-verification-service.js";
 import { resolveActiveServerMute } from "../services/server-mute-service.js";
 import type {
+  ChatUploadFinalizeBatchResponse,
   ChatUploadFinalizeResponse,
   ChatUploadInitResponse
 } from "../api-contract.types.ts";
@@ -74,6 +75,23 @@ const finalizeUploadSchema = z.object({
   width: z.number().int().positive().optional(),
   height: z.number().int().positive().optional(),
   checksum: z.string().trim().max(512).optional()
+});
+
+const finalizeBatchUploadSchema = z.object({
+  roomSlug: z.string().trim().min(1).max(128),
+  topicId: z.string().trim().uuid().optional(),
+  text: z.string().trim().max(20000).optional().default(""),
+  mentionUserIds: z.array(z.string().trim().uuid()).max(200).optional().default([]),
+  uploads: z.array(z.object({
+    uploadId: z.string().trim().uuid(),
+    storageKey: z.string().trim().min(4).max(512),
+    mimeType: z.string().trim().min(1).max(128),
+    sizeBytes: z.number().int().positive().max(50 * 1024 * 1024),
+    downloadUrl: z.string().trim().url().max(2048).optional(),
+    width: z.number().int().positive().optional(),
+    height: z.number().int().positive().optional(),
+    checksum: z.string().trim().max(512).optional()
+  })).min(1).max(12)
 });
 
 const orphanCleanupSchema = z.object({
@@ -1099,6 +1117,353 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
           messageId: message.id
         }),
         "chat upload finalized"
+      );
+
+      return response;
+    }
+  );
+
+  fastify.post<{ Body: unknown }>(
+    "/v1/chat/uploads/finalize-batch",
+    {
+      preHandler: [requireAuth, requireServiceAccess, limitUploadFinalize]
+    },
+    async (request, reply) => {
+      if (reply.sent) {
+        return;
+      }
+
+      const parsed = finalizeBatchUploadSchema.safeParse(request.body || {});
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsed.error.flatten()
+        });
+      }
+
+      const userId = normalizeBoundedString(request.user?.sub, 128) || "";
+      if (!userId) {
+        return reply.code(401).send({
+          error: "Unauthorized",
+          message: "Valid auth session is required"
+        });
+      }
+
+      const currentUserResult = await db.query<UserRow>(
+        `SELECT id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, created_at
+         FROM users
+         WHERE id = $1
+         LIMIT 1`,
+        [userId]
+      );
+      if ((currentUserResult.rowCount || 0) === 0) {
+        return reply.code(404).send({
+          error: "UserNotFound",
+          message: "User does not exist"
+        });
+      }
+
+      const currentUser = currentUserResult.rows[0];
+      const requestRoomSlug = normalizeBoundedString(parsed.data.roomSlug, 128) || "";
+      const requestTopicId = typeof parsed.data.topicId === "string" ? parsed.data.topicId.trim() : null;
+      const text = normalizeBoundedString(parsed.data.text, 20000) || "";
+      const mentionUserIds = Array.isArray(parsed.data.mentionUserIds)
+        ? parsed.data.mentionUserIds.map((item) => normalizeBoundedString(item, 128) || "").filter((item) => item.length > 0)
+        : [];
+
+      type PreparedAttachment = {
+        uploadId: string;
+        reservation: UploadReservation;
+        uploadedObject: UploadedObjectRecord;
+        attachmentType: "image" | "document" | "audio";
+        downloadUrl: string | null;
+        width: number | null;
+        height: number | null;
+        checksum: string | null;
+      };
+
+      const prepared: PreparedAttachment[] = [];
+
+      for (const upload of parsed.data.uploads) {
+        const uploadId = upload.uploadId;
+        const uploadKey = `chat:upload:init:${uploadId}`;
+        const uploadedObjectKey = `chat:upload:stored:${uploadId}`;
+        const rawReservation = await fastify.redis.get(uploadKey);
+        if (!rawReservation) {
+          return reply.code(404).send({
+            error: "UploadReservationNotFound",
+            message: "Upload reservation is missing or expired"
+          });
+        }
+
+        const rawUploadedObject = await fastify.redis.get(uploadedObjectKey);
+        if (!rawUploadedObject) {
+          return reply.code(400).send({
+            error: "UploadObjectNotFound",
+            message: "Upload object is missing; upload step must complete before finalize"
+          });
+        }
+
+        let reservation: UploadReservation | null = null;
+        try {
+          reservation = JSON.parse(rawReservation) as UploadReservation;
+        } catch {
+          await fastify.redis.del(uploadKey);
+          return reply.code(400).send({
+            error: "UploadReservationInvalid",
+            message: "Upload reservation is invalid"
+          });
+        }
+
+        if (!reservation || reservation.userId !== userId) {
+          return reply.code(403).send({
+            error: "Forbidden",
+            message: "Upload reservation belongs to another user"
+          });
+        }
+
+        let uploadedObject: UploadedObjectRecord | null = null;
+        try {
+          uploadedObject = JSON.parse(rawUploadedObject) as UploadedObjectRecord;
+        } catch {
+          await fastify.redis.del(uploadedObjectKey);
+          return reply.code(400).send({
+            error: "UploadObjectInvalid",
+            message: "Upload object metadata is invalid"
+          });
+        }
+
+        if (
+          !uploadedObject
+          || uploadedObject.storageKey !== reservation.storageKey
+          || uploadedObject.mimeType !== reservation.mimeType
+          || uploadedObject.sizeBytes !== reservation.sizeBytes
+        ) {
+          return reply.code(400).send({
+            error: "UploadObjectMismatch",
+            message: "Uploaded object does not match reservation"
+          });
+        }
+
+        const requestMimeType = normalizeMimeType(upload.mimeType);
+        const requestStorageKey = normalizeBoundedString(upload.storageKey, 512) || "";
+        if (
+          requestRoomSlug !== reservation.roomSlug
+          || requestTopicId !== reservation.topicId
+          || requestMimeType !== reservation.mimeType
+          || upload.sizeBytes !== reservation.sizeBytes
+          || requestStorageKey !== reservation.storageKey
+        ) {
+          return reply.code(400).send({
+            error: "UploadFinalizeMismatch",
+            message: "Finalize payload does not match upload reservation"
+          });
+        }
+
+        try {
+          const objectStat = await chatObjectStorage.statObject(reservation.storageKey);
+          if (objectStat.sizeBytes !== reservation.sizeBytes) {
+            throw new Error("size_mismatch");
+          }
+
+          if (objectStat.mimeType) {
+            const objectMimeType = normalizeMimeType(objectStat.mimeType).split(";")[0];
+            if (objectMimeType && objectMimeType !== reservation.mimeType) {
+              throw new Error("mime_mismatch");
+            }
+          }
+        } catch (error) {
+          if (!(error instanceof ChatObjectStorageNotFoundError)) {
+            request.log.error({ err: error, storageKey: reservation.storageKey }, "chat upload object stat failed");
+          }
+
+          return reply.code(400).send({
+            error: "UploadObjectMissing",
+            message: "Uploaded object is missing or corrupted"
+          });
+        }
+
+        if (upload.checksum && upload.checksum !== uploadedObject.checksum) {
+          return reply.code(400).send({
+            error: "UploadChecksumMismatch",
+            message: "Attachment checksum mismatch"
+          });
+        }
+
+        const attachmentType = resolveAttachmentTypeFromMime(reservation.mimeType);
+        prepared.push({
+          uploadId,
+          reservation,
+          uploadedObject,
+          attachmentType,
+          downloadUrl: buildDownloadUrl(reservation.storageKey, upload.downloadUrl),
+          width: attachmentType === "image" && typeof upload.width === "number" ? upload.width : null,
+          height: attachmentType === "image" && typeof upload.height === "number" ? upload.height : null,
+          checksum: upload.checksum || uploadedObject.checksum || null
+        });
+      }
+
+      const firstReservation = prepared[0]?.reservation;
+      if (!firstReservation) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          message: "At least one upload is required"
+        });
+      }
+
+      const roomPolicyResult = await db.query<Pick<RoomRow, "id" | "server_id" | "is_readonly" | "slowmode_seconds">>(
+        `SELECT id, server_id, is_readonly, slowmode_seconds
+         FROM rooms
+         WHERE id = $1
+           AND is_archived = FALSE
+         LIMIT 1`,
+        [firstReservation.roomId]
+      );
+      if ((roomPolicyResult.rowCount || 0) === 0) {
+        return reply.code(404).send({
+          error: "RoomNotFound",
+          message: "Room does not exist"
+        });
+      }
+
+      const roomPolicy = roomPolicyResult.rows[0];
+      const sendPolicy = await checkRoomSendPolicy(roomPolicy, userId);
+      if (!sendPolicy.allowed) {
+        return reply.code(sendPolicy.statusCode).send(sendPolicy.payload);
+      }
+
+      let message: {
+        id: string;
+        room_id: string;
+        topic_id: string | null;
+        user_id: string;
+        body: string;
+        created_at: string;
+      } | null = null;
+      const insertedAttachments: MessageAttachmentRow[] = [];
+
+      await db.query("BEGIN");
+      try {
+        const insertedMessage = await db.query<{
+          id: string;
+          room_id: string;
+          topic_id: string | null;
+          user_id: string;
+          body: string;
+          created_at: string;
+        }>(
+          `INSERT INTO messages (room_id, topic_id, user_id, body)
+           VALUES ($1, $2, $3, $4)
+           RETURNING id, room_id, topic_id, user_id, body, created_at`,
+          [firstReservation.roomId, firstReservation.topicId, userId, text]
+        );
+
+        message = insertedMessage.rows[0];
+
+        for (const item of prepared) {
+          const insertedAttachment = await db.query<MessageAttachmentRow>(
+            `INSERT INTO message_attachments (
+               message_id,
+               type,
+               storage_key,
+               download_url,
+               mime_type,
+               size_bytes,
+               width,
+               height,
+               checksum
+             )
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+             RETURNING id, message_id, type, storage_key, download_url, mime_type, size_bytes, width, height, checksum, created_at`,
+            [
+              message.id,
+              item.attachmentType,
+              item.reservation.storageKey,
+              item.downloadUrl,
+              item.reservation.mimeType,
+              item.reservation.sizeBytes,
+              item.width,
+              item.height,
+              item.checksum
+            ]
+          );
+          insertedAttachments.push(insertedAttachment.rows[0]);
+        }
+
+        await db.query("COMMIT");
+      } catch (error) {
+        await db.query("ROLLBACK");
+        throw error;
+      }
+
+      for (const item of prepared) {
+        await fastify.redis.del(`chat:upload:init:${item.uploadId}`);
+        await fastify.redis.del(`chat:upload:stored:${item.uploadId}`);
+      }
+
+      if (sendPolicy.slowmodeSeconds > 0 && !sendPolicy.canBypass) {
+        await fastify.redis.setEx(
+          `room:slowmode:${firstReservation.roomId}:${userId}`,
+          sendPolicy.slowmodeSeconds,
+          String(sendPolicy.slowmodeSeconds)
+        );
+      }
+
+      const responseMessage: RoomMessageRow = {
+        id: String(message?.id || ""),
+        room_id: String(message?.room_id || ""),
+        topic_id: message?.topic_id || null,
+        user_id: String(message?.user_id || ""),
+        text: String(message?.body || ""),
+        created_at: String(message?.created_at || new Date().toISOString()),
+        edited_at: null,
+        user_name: currentUser.name,
+        attachments: insertedAttachments
+      };
+
+      const wsPayload = {
+        id: responseMessage.id,
+        roomId: responseMessage.room_id,
+        roomSlug: firstReservation.roomSlug,
+        topicId: firstReservation.topicId,
+        topicSlug: firstReservation.topicSlug,
+        userId: responseMessage.user_id,
+        userName: currentUser.name,
+        text: responseMessage.text,
+        createdAt: responseMessage.created_at,
+        senderRequestId: null,
+        attachments: insertedAttachments.map((attachment) => ({
+          id: attachment.id,
+          type: attachment.type,
+          storageKey: attachment.storage_key,
+          downloadUrl: attachment.download_url,
+          mimeType: attachment.mime_type,
+          sizeBytes: attachment.size_bytes,
+          width: attachment.width,
+          height: attachment.height,
+          checksum: attachment.checksum
+        })),
+        mentionUserIds
+      };
+
+      broadcastRealtimeEnvelope(buildChatMessageEnvelope(wsPayload));
+
+      const response: ChatUploadFinalizeBatchResponse = {
+        message: responseMessage,
+        attachments: insertedAttachments
+      };
+
+      request.log.info(
+        buildUploadAuditContext(request, {
+          event: "chat.upload.finalize_batch",
+          status: "ok",
+          provider: config.chatStorageProvider,
+          roomSlug: firstReservation.roomSlug,
+          topicId: firstReservation.topicId,
+          uploadCount: insertedAttachments.length,
+          messageId: responseMessage.id
+        }),
+        "chat upload batch finalized"
       );
 
       return response;

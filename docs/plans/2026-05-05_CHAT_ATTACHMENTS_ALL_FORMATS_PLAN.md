@@ -167,3 +167,54 @@ Scope: Расширение вложений чата для room chat и DM: м
   - Митигация: dry-run, safety window, логирование delete decisions.
 - Риск: несовместимость старого UI/контракта.
   - Митигация: backward-compatible API и feature-flag rollout.
+
+## 8) Техразбивка по файлам (composer redesign + attachments)
+
+### 8.1 Frontend (web)
+
+- `apps/web/src/components/chatPanel/sections/ChatComposerSection.tsx`
+  - новая верстка composer-панели под референс;
+  - chips-ряд pending-вложений над input;
+  - сохранение mention picker / hotkeys / submit flow.
+- `apps/web/src/styles.css`
+  - стили glass/overlay панели;
+  - стили chips (`ext/name/size/remove`);
+  - mobile/desktop адаптив новой структуры.
+- `apps/web/src/components/chatPanel/chatPanelTypes.ts`
+  - расширение props под metadata pending file (size).
+- `apps/web/src/components/ChatPanel.tsx`
+  - прокидывание новых props в секцию composer.
+- `apps/web/src/hooks/app/state/useWorkspaceChatVideoProps.ts`
+  - вычисление и передача metadata pending file в ChatPanel.
+- `apps/web/src/components/AppWorkspacePanels.tsx`
+  - DM fallback-значения для новых props.
+
+### 8.2 Backend/API (следующий этап)
+
+- `apps/api/src/routes/chat-uploads.ts`
+  - batch finalize/init contract и лимиты 1GB.
+- `apps/api/src/routes/dm.ts`
+  - синхронизация DM upload flow с batch/scenario.
+- `apps/api/src/config.ts` (+ отдельный config-модуль)
+  - единые лимиты upload/retention/threshold.
+
+### 8.3 Ops/Retention/Backup (следующий этап)
+
+- `scripts/ops/*` + scheduler jobs env
+  - cleanup large-файлов по TTL;
+  - backup-фильтр <=25MB.
+- `docs/operations/*`
+  - обновление runbook/checklist для cleanup+backup.
+
+## 9) Execution Notes (итерации)
+
+- Iteration 1 (in progress): composer panel redesign foundation
+  - новая структура панели;
+  - chips-строка и кнопки attach/send;
+  - без batch upload (single pending attachment flow остается совместимым).
+- Iteration 2: multi-file state + chips actions
+  - переход с single pending file на queue.
+  - реализовано: multiple file picker, queue chips, remove per chip.
+  - текущий transitional send behavior: отправляется первый файл из очереди за submit.
+- Iteration 3: upload progress + retries + batch finalize
+  - UI/transport/API синхронно.

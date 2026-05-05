@@ -46,7 +46,7 @@ type ChatPanelProps = {
   loadingOlderMessages: boolean;
   chatText: string;
   composePreviewImageUrl: string | null;
-  composePendingAttachmentName: string | null;
+  composePendingAttachments: Array<{ name: string; sizeBytes: number }>;
   typingUsers: string[];
   chatLogRef: React.RefObject<HTMLDivElement>;
   onLoadOlderMessages: () => void;
@@ -65,7 +65,8 @@ type ChatPanelProps = {
   onChatPaste: (event: React.ClipboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   onChatInputKeyDown: (event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   onSendMessage: (event: React.FormEvent) => void;
-  onSelectAttachmentFile: (file: File | null) => void;
+  onSelectAttachmentFiles: (files: File[]) => void;
+  onRemovePendingAttachmentAt: (index: number) => void;
   onClearPendingAttachment: () => void;
   editingMessageId: string | null;
   replyingToMessage: { id: string; userName: string; text: string } | null;
@@ -137,7 +138,7 @@ type UseWorkspaceChatVideoPropsInput = {
   loadingOlderMessages: boolean;
   chatText: string;
   pendingChatImageDataUrl: string | null;
-  pendingChatAttachmentFile: File | null;
+  pendingChatAttachmentFiles: File[];
   activeChatTypingUsers: string[];
   chatLogRef: React.RefObject<HTMLDivElement>;
   loadOlderMessages: () => void;
@@ -153,7 +154,8 @@ type UseWorkspaceChatVideoPropsInput = {
   handleChatPaste: (event: React.ClipboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   handleChatInputKeyDown: (event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   sendMessage: (event: React.FormEvent) => void;
-  selectAttachmentFile: (file: File | null) => void;
+  selectAttachmentFiles: (files: File[]) => void;
+  removePendingAttachmentAt: (index: number) => void;
   clearPendingAttachment: () => void;
   editingMessageId: string | null;
   replyingToMessageId: string | null;
@@ -215,7 +217,7 @@ export function useWorkspaceChatVideoProps({
   loadingOlderMessages,
   chatText,
   pendingChatImageDataUrl,
-  pendingChatAttachmentFile,
+  pendingChatAttachmentFiles,
   activeChatTypingUsers,
   chatLogRef,
   loadOlderMessages,
@@ -225,7 +227,8 @@ export function useWorkspaceChatVideoProps({
   handleChatPaste,
   handleChatInputKeyDown,
   sendMessage,
-  selectAttachmentFile,
+  selectAttachmentFiles,
+  removePendingAttachmentAt,
   clearPendingAttachment,
   editingMessageId,
   replyingToMessageId,
@@ -355,7 +358,10 @@ export function useWorkspaceChatVideoProps({
     loadingOlderMessages,
     chatText,
     composePreviewImageUrl: pendingChatImageDataUrl,
-    composePendingAttachmentName: pendingChatAttachmentFile ? String(pendingChatAttachmentFile.name || "") : null,
+    composePendingAttachments: (Array.isArray(pendingChatAttachmentFiles) ? pendingChatAttachmentFiles : []).map((file) => ({
+      name: String(file?.name || ""),
+      sizeBytes: Number(file?.size || 0)
+    })).filter((item) => item.name),
     typingUsers: activeChatTypingUsers,
     chatLogRef,
     onLoadOlderMessages: () => void loadOlderMessages(),
@@ -387,7 +393,8 @@ export function useWorkspaceChatVideoProps({
     onChatPaste: handleChatPaste,
     onChatInputKeyDown: handleChatInputKeyDown,
     onSendMessage: sendMessage,
-    onSelectAttachmentFile: selectAttachmentFile,
+    onSelectAttachmentFiles: selectAttachmentFiles,
+    onRemovePendingAttachmentAt: removePendingAttachmentAt,
     onClearPendingAttachment: clearPendingAttachment,
     editingMessageId,
     replyingToMessage: replyingToMessageId

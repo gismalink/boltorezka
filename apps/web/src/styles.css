@@ -1752,6 +1752,11 @@ pre {
   min-width: 0;
 }
 
+.chat-compose-modern {
+  display: grid;
+  gap: var(--space-2xs);
+}
+
 .chat-compose-input-stack {
   flex: 1;
   min-width: 0;
@@ -1763,17 +1768,132 @@ pre {
   margin-bottom: 0;
 }
 
+.chat-compose-surface {
+  display: grid;
+  gap: var(--space-2xs);
+  padding: 8px;
+  border-radius: 14px;
+  border: var(--border-thin) solid color-mix(in srgb, var(--pixel-border) 74%, transparent 26%);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--pixel-panel) 72%, transparent 28%) 0%, color-mix(in srgb, var(--pixel-panel-2) 70%, transparent 30%) 100%);
+  backdrop-filter: blur(10px);
+}
+
+.chat-compose-main-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 44px;
+  align-items: end;
+  gap: 8px;
+}
+
 .chat-compose textarea {
-  flex: 1;
   min-width: 0;
-  min-height: 46px;
+  min-height: 58px;
   max-height: 180px;
+  width: 100%;
+  padding-left: 12px;
+  padding-right: 12px;
+  padding-top: 10px;
+  padding-bottom: 10px;
   line-height: 1.35;
-  resize: vertical;
+  resize: none;
+  border-radius: 12px;
 }
 
 .chat-compose-editor-shell {
   position: relative;
+}
+
+.chat-compose-attach-btn {
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  border-radius: 12px;
+}
+
+.chat-compose-send-btn {
+  min-width: 44px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: 999px;
+  border: var(--border-thin) solid color-mix(in srgb, var(--pixel-neon-cyan) 60%, var(--pixel-border) 40%);
+  background: color-mix(in srgb, var(--pixel-neon-cyan) 30%, var(--pixel-panel) 70%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-compose-chips {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.chat-compose-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: min(320px, 84vw);
+  padding: 6px;
+  border-radius: 12px;
+  border: var(--border-thin) solid color-mix(in srgb, var(--pixel-neon-cyan) 30%, var(--pixel-border) 70%);
+  background: color-mix(in srgb, var(--pixel-panel-2) 84%, var(--pixel-panel) 16%);
+}
+
+.chat-compose-chip-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+}
+
+.chat-compose-chip-ext {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  height: 26px;
+  border-radius: 8px;
+  font-size: calc(var(--font-size-sm) - 0.18rem);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--pixel-neon-cyan);
+  background: color-mix(in srgb, var(--pixel-bg) 72%, transparent 28%);
+}
+
+.chat-compose-chip-name {
+  min-width: 0;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--pixel-text);
+  font-size: calc(var(--font-size-sm) - 0.12rem);
+}
+
+.chat-compose-chip-size {
+  color: var(--pixel-muted);
+  font-size: calc(var(--font-size-sm) - 0.2rem);
+  white-space: nowrap;
+}
+
+.chat-compose-chip-remove {
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+  border-radius: 999px;
 }
 
 .chat-mention-picker {
@@ -3312,6 +3432,10 @@ pre {
   text-overflow: ellipsis;
 }
 
+.chat-compose-chip:focus-within {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--pixel-neon-cyan) 44%, transparent 56%);
+}
+
 .chat-link-preview {
   margin-top: 6px;
   display: grid;
@@ -4482,7 +4606,6 @@ pre {
   }
 
   .workspace-mobile .chat-compose {
-    flex-wrap: wrap;
     gap: var(--space-xs);
   }
 
@@ -4490,14 +4613,28 @@ pre {
     width: 100%;
   }
 
+  .workspace-mobile .chat-compose-main-row {
+    grid-template-columns: 38px minmax(0, 1fr) 42px;
+    gap: 6px;
+  }
+
   .workspace-mobile .chat-compose textarea {
-    flex-basis: 100%;
-    min-height: 72px;
+    min-height: 64px;
   }
 
   .workspace-mobile .chat-compose .chat-compose-thumb-btn,
-  .workspace-mobile .chat-compose > .btn {
+  .workspace-mobile .chat-compose > .btn,
+  .workspace-mobile .chat-compose .chat-compose-attach-btn,
+  .workspace-mobile .chat-compose .chat-compose-send-btn {
     min-height: 34px;
+  }
+
+  .workspace-mobile .chat-compose-chip {
+    max-width: 86vw;
+  }
+
+  .workspace-mobile .chat-compose-chip-name {
+    max-width: 120px;
   }
 
   .workspace-mobile .chat-floating-actions {

@@ -179,7 +179,7 @@ export function useChatComposerActions({
   const [reactionsByMessageId, setReactionsByMessageId] = useState<
     Record<string, Record<string, { count: number; reacted: boolean }>>
   >({});
-  const [pendingChatAttachmentFile, setPendingChatAttachmentFile] = useState<File | null>(null);
+  const [pendingChatAttachmentFiles, setPendingChatAttachmentFiles] = useState<File[]>([]);
 
   useEffect(() => {
     const existingIds = new Set(messages.map((item) => item.id));
@@ -264,7 +264,7 @@ export function useChatComposerActions({
         mentionUserIds: resolveMentionUserIdsFromText(chatText, mentionCandidates),
         editingMessageId,
         pendingChatImageDataUrl,
-        pendingChatAttachmentFile,
+        pendingChatAttachmentFiles,
         user,
         maxChatRetries,
         maxDataUrlLength: serverChatImagePolicy.maxDataUrlLength,
@@ -309,7 +309,7 @@ export function useChatComposerActions({
 
       setChatText("");
       setPendingChatImageDataUrl(null);
-      setPendingChatAttachmentFile(null);
+      setPendingChatAttachmentFiles((prev) => (prev.length > 1 ? prev.slice(1) : []));
       if (result.mode === "edit") {
         setEditingMessageId(null);
       }
@@ -337,7 +337,7 @@ export function useChatComposerActions({
     chatText,
     editingMessageId,
     maxChatRetries,
-    pendingChatAttachmentFile,
+    pendingChatAttachmentFiles,
     pendingChatImageDataUrl,
     pushToast,
     selectChannelPlaceholderMessage,
@@ -349,7 +349,7 @@ export function useChatComposerActions({
     setChatText,
     setEditingMessageId,
     setReplyingToMessageId,
-    setPendingChatAttachmentFile,
+    setPendingChatAttachmentFiles,
     setPendingChatImageDataUrl,
     user
   ]);
@@ -379,7 +379,7 @@ export function useChatComposerActions({
         if (imageFile) {
           const dataUrl = await compressImageToDataUrl(imageFile, serverChatImagePolicy);
           setPendingChatImageDataUrl(dataUrl);
-          setPendingChatAttachmentFile(null);
+          setPendingChatAttachmentFiles([]);
           return;
         }
 
@@ -389,13 +389,13 @@ export function useChatComposerActions({
           const synthesizedFile = new File([blob], "clipboard-image", { type: blob.type || "image/png" });
           const dataUrl = await compressImageToDataUrl(synthesizedFile, serverChatImagePolicy);
           setPendingChatImageDataUrl(dataUrl);
-          setPendingChatAttachmentFile(null);
+          setPendingChatAttachmentFiles([]);
           return;
         }
 
         if (/^https?:\/\//i.test(htmlImageSource)) {
           setPendingChatImageDataUrl(htmlImageSource);
-          setPendingChatAttachmentFile(null);
+          setPendingChatAttachmentFiles([]);
           return;
         }
 
@@ -405,7 +405,7 @@ export function useChatComposerActions({
           const synthesizedFile = new File([blob], "clipboard-image", { type: blob.type || "image/png" });
           const dataUrl = await compressImageToDataUrl(synthesizedFile, serverChatImagePolicy);
           setPendingChatImageDataUrl(dataUrl);
-          setPendingChatAttachmentFile(null);
+          setPendingChatAttachmentFiles([]);
           return;
         }
 
@@ -414,22 +414,57 @@ export function useChatComposerActions({
         pushToast(chatImageTooLargeMessage);
       }
     })();
-  }, [chatImageTooLargeMessage, chatRoomSlug, pushToast, serverChatImagePolicy, setPendingChatAttachmentFile, setPendingChatImageDataUrl]);
+  }, [chatImageTooLargeMessage, chatRoomSlug, pushToast, serverChatImagePolicy, setPendingChatAttachmentFiles, setPendingChatImageDataUrl]);
 
-  const selectAttachmentFile = useCallback((file: File | null) => {
-    if (!file) {
-      setPendingChatAttachmentFile(null);
+  const selectAttachmentFiles = useCallback((files: File[]) => {
+    if (!Array.isArray(files) || files.length === 0) {
+      return;
+    }
+
+    const normalizedFiles = files.filter((file): file is File => file instanceof File && Number(file.size || 0) > 0);
+    if (normalizedFiles.length === 0) {
       return;
     }
 
     setPendingChatImageDataUrl(null);
-    setPendingChatAttachmentFile(file);
-  }, [setPendingChatAttachmentFile, setPendingChatImageDataUrl]);
+    setPendingChatAttachmentFiles((prev) => {
+      const byIdentity = new Set(prev.map((item) => `${item.name}::${item.size}::${item.lastModified}`));
+      const appended = normalizedFiles.filter((item) => {
+        const id = `${item.name}::${item.size}::${item.lastModified}`;
+        if (byIdentity.has(id)) {
+          return false;
+        }
+        byIdentity.add(id);
+        return true;
+      });
+
+      return appended.length > 0 ? [...prev, ...appended] : prev;
+    });
+  }, [setPendingChatAttachmentFiles, setPendingChatImageDataUrl]);
+
+  const selectAttachmentFile = useCallback((file: File | null) => {
+    if (!file) {
+      setPendingChatAttachmentFiles([]);
+      return;
+    }
+
+    setPendingChatImageDataUrl(null);
+    setPendingChatAttachmentFiles([file]);
+  }, [setPendingChatAttachmentFiles, setPendingChatImageDataUrl]);
+
+  const removePendingAttachmentAt = useCallback((index: number) => {
+    const safeIndex = Number(index);
+    if (!Number.isFinite(safeIndex) || safeIndex < 0) {
+      return;
+    }
+
+    setPendingChatAttachmentFiles((prev) => prev.filter((_, fileIndex) => fileIndex !== safeIndex));
+  }, [setPendingChatAttachmentFiles]);
 
   const clearPendingAttachment = useCallback(() => {
-    setPendingChatAttachmentFile(null);
+    setPendingChatAttachmentFiles([]);
     setPendingChatImageDataUrl(null);
-  }, [setPendingChatAttachmentFile, setPendingChatImageDataUrl]);
+  }, [setPendingChatAttachmentFiles, setPendingChatImageDataUrl]);
 
   const handleChatInputKeyDown = useCallback((event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
@@ -747,8 +782,11 @@ export function useChatComposerActions({
     togglePinMessage,
     toggleMessageReaction,
     reportMessage,
-    pendingChatAttachmentFile,
+    pendingChatAttachmentFile: pendingChatAttachmentFiles[0] || null,
+    pendingChatAttachmentFiles,
+    selectAttachmentFiles,
     selectAttachmentFile,
+    removePendingAttachmentAt,
     clearPendingAttachment,
     applyRemotePinState,
     applyRemoteMessageReactionState

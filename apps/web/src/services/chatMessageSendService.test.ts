@@ -49,7 +49,7 @@ function createBaseParams(): SendChatMessageParams {
     mentionUserIds: [],
     editingMessageId: null,
     pendingChatImageDataUrl: null,
-    pendingChatAttachmentFile: null,
+    pendingChatAttachmentFiles: [],
     user: null,
     maxChatRetries: 1,
     maxDataUrlLength: 20,
@@ -68,7 +68,7 @@ describe("chatMessageSendService", () => {
 
   it("returns attachment-unsupported-type for ws-style UnsupportedMimeType error", async () => {
     const params = createBaseParams();
-    params.pendingChatAttachmentFile = { type: "application/x-msdownload", size: 120 } as File;
+    params.pendingChatAttachmentFiles = [{ type: "application/x-msdownload", size: 120 } as File];
     chatUploadInitMock.mockRejectedValue(new Error("chat.upload:UnsupportedMimeType:blocked"));
 
     const result = await sendChatMessage(params);
@@ -78,7 +78,7 @@ describe("chatMessageSendService", () => {
 
   it("returns attachment-too-large for explicit AttachmentTooLarge code", async () => {
     const params = createBaseParams();
-    params.pendingChatAttachmentFile = { type: "image/png", size: 5_000_000 } as File;
+    params.pendingChatAttachmentFiles = [{ type: "image/png", size: 5_000_000 } as File];
     chatUploadInitMock.mockRejectedValue(
       Object.assign(new Error("too large"), { code: "AttachmentTooLarge" })
     );
@@ -90,7 +90,7 @@ describe("chatMessageSendService", () => {
 
   it("returns server-error for unknown upload failure", async () => {
     const params = createBaseParams();
-    params.pendingChatAttachmentFile = { type: "image/png", size: 200 } as File;
+    params.pendingChatAttachmentFiles = [{ type: "image/png", size: 200 } as File];
     chatUploadInitMock.mockRejectedValue(new Error("network failure"));
 
     const result = await sendChatMessage(params);

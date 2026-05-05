@@ -43,7 +43,10 @@ export function useAppRoomChatActions({ roomPresence, chatComposer }: UseAppRoom
     toggleMessageReaction,
     reportMessage,
     pendingChatAttachmentFile,
+    pendingChatAttachmentFiles,
+    selectAttachmentFiles,
     selectAttachmentFile,
+    removePendingAttachmentAt,
     clearPendingAttachment,
     applyRemotePinState,
     applyRemoteMessageReactionState
@@ -68,7 +71,10 @@ export function useAppRoomChatActions({ roomPresence, chatComposer }: UseAppRoom
     toggleMessageReaction,
     reportMessage,
     pendingChatAttachmentFile,
+    pendingChatAttachmentFiles,
+    selectAttachmentFiles,
     selectAttachmentFile,
+    removePendingAttachmentAt,
     clearPendingAttachment,
     applyRemotePinState,
     applyRemoteMessageReactionState
