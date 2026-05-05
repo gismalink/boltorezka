@@ -300,6 +300,10 @@ Status: completed for current scope (batch finalize + multi-file queue + progres
   - реализовано: backend endpoint `/v1/chat/uploads/finalize-batch` + web client integration.
   - реализовано: multi-file send -> single message with multiple attachments.
   - реализовано: per-file progress UI (upload states + progress bar) + per-file retry action в chips.
+  - реализовано: paste-очередь для скриншотов (повторный paste добавляет новый attachment, а не заменяет текущий).
+  - реализовано: inline audio player для `audio/*` вложений в message timeline.
+  - реализовано: расширенный allowlist mime/расширений (office/docs/archives/audio + exe/dmg) и обновленный file picker accept.
+  - реализовано: UI polish composer (компактный textarea, вертикальный layout chips, абсолютный remove control).
   - реализовано: client telemetry события `chat.upload.init.ok`, `chat.upload.put.ok`, `chat.upload.finalize_batch.ok`, `chat.upload.batch.failed`.
   - реализовано: server-side idempotency guard для batch finalize (request hash + redis lock + replay cache).
   - test rollout выполнен, smoke web/api/realtime пройден (desktop update feed отмечен как отдельный known issue).
