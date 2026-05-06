@@ -87,3 +87,4 @@ Source-of-truth для расписания/команды:
 
 - Бэкап хранится на хосте, не в Docker volume.
 - Для защиты от потери хоста рекомендуется дополнительная внешняя копия (off-host / object storage).
+- Этот runbook покрывает только Postgres backup. Политика chat object storage (upload limits / retention / backup threshold) описана отдельно: `docs/operations/CHAT_OBJECT_STORAGE_POLICY_RUNBOOK.md`.

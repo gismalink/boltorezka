@@ -1,4 +1,5 @@
 import type { AppConfig, AuthMode } from "./config.types.ts";
+import { readChatMediaConfigFromEnv } from "./chat-media-config.js";
 
 const requiredKeys = ["DATABASE_URL", "REDIS_URL", "JWT_SECRET"];
 
@@ -56,12 +57,8 @@ const authSessionCookieSameSite: "Lax" | "Strict" | "None" = authSessionCookieSa
     ? "None"
     : "Lax";
 const authSessionCookieMaxAgeSecRaw = Number.parseInt(String(process.env.AUTH_SESSION_COOKIE_MAX_AGE_SEC || `${60 * 60 * 24 * 30}`), 10);
-const chatUploadMaxSizeBytesRaw = Number.parseInt(String(process.env.CHAT_UPLOAD_MAX_SIZE_BYTES || `${5 * 1024 * 1024}`), 10);
 const chatUploadInitTtlSecRaw = Number.parseInt(String(process.env.CHAT_UPLOAD_INIT_TTL_SEC || "600"), 10);
-const chatUploadAllowedMimeTypes = parseCsv(
-  process.env.CHAT_UPLOAD_ALLOWED_MIME_TYPES
-  || "image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain,text/csv,text/markdown,application/zip,application/x-zip-compressed,application/x-7z-compressed,application/x-rar-compressed,application/vnd.rar,application/gzip,application/x-gzip,application/x-tar,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.oasis.opendocument.text,application/vnd.oasis.opendocument.spreadsheet,application/vnd.oasis.opendocument.presentation,application/rtf,audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/mp4,audio/x-m4a,application/x-msdownload,application/vnd.microsoft.portable-executable,application/x-apple-diskimage"
-);
+const chatMediaConfig = readChatMediaConfigFromEnv(process.env);
 const chatStorageProvider = toTrimmedLower(process.env.CHAT_STORAGE_PROVIDER || "localfs") === "minio"
   ? "minio"
   : "localfs";
@@ -114,48 +111,14 @@ export const config: AppConfig = {
   livekitTokenTtlSec: Number.isFinite(livekitTokenTtlSecRaw) && livekitTokenTtlSecRaw > 0
     ? livekitTokenTtlSecRaw
     : 1800,
-  chatUploadMaxSizeBytes: Number.isFinite(chatUploadMaxSizeBytesRaw) && chatUploadMaxSizeBytesRaw > 0
-    ? chatUploadMaxSizeBytesRaw
-    : 5 * 1024 * 1024,
-  chatUploadAllowedMimeTypes: chatUploadAllowedMimeTypes.length > 0
-    ? chatUploadAllowedMimeTypes
-    : [
-      "image/png",
-      "image/jpeg",
-      "image/webp",
-      "image/gif",
-      "application/pdf",
-      "text/plain",
-      "text/csv",
-      "text/markdown",
-      "application/zip",
-      "application/x-zip-compressed",
-      "application/x-7z-compressed",
-      "application/x-rar-compressed",
-      "application/vnd.rar",
-      "application/gzip",
-      "application/x-gzip",
-      "application/x-tar",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "application/vnd.ms-excel",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "application/vnd.ms-powerpoint",
-      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-      "application/vnd.oasis.opendocument.text",
-      "application/vnd.oasis.opendocument.spreadsheet",
-      "application/vnd.oasis.opendocument.presentation",
-      "application/rtf",
-      "audio/mpeg",
-      "audio/mp3",
-      "audio/wav",
-      "audio/ogg",
-      "audio/mp4",
-      "audio/x-m4a",
-      "application/x-msdownload",
-      "application/vnd.microsoft.portable-executable",
-      "application/x-apple-diskimage"
-    ],
+  chatImageMaxDataUrlLength: chatMediaConfig.chatImageMaxDataUrlLength,
+  chatImageMaxSide: chatMediaConfig.chatImageMaxSide,
+  chatImageJpegQuality: chatMediaConfig.chatImageJpegQuality,
+  chatUploadMaxSizeBytes: chatMediaConfig.chatUploadMaxSizeBytes,
+  chatLargeFileThresholdBytes: chatMediaConfig.chatLargeFileThresholdBytes,
+  chatLargeFileRetentionDays: chatMediaConfig.chatLargeFileRetentionDays,
+  chatBackupMaxFileSizeBytes: chatMediaConfig.chatBackupMaxFileSizeBytes,
+  chatUploadAllowedMimeTypes: chatMediaConfig.chatUploadAllowedMimeTypes,
   chatUploadInitTtlSec: Number.isFinite(chatUploadInitTtlSecRaw) && chatUploadInitTtlSecRaw > 0
     ? chatUploadInitTtlSecRaw
     : 600,

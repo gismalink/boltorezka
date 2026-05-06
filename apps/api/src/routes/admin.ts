@@ -5,6 +5,7 @@ import { broadcastRealtimeEnvelope } from "../realtime-broadcast.js";
 import { loadCurrentUser, requireAuth, requireRole } from "../middleware/auth.js";
 import { applyServiceBan, revokeServiceBan } from "../services/ban-service.js";
 import { writeServerAuditEvent } from "../services/server-audit-service.js";
+import { config } from "../config.js";
 import { buildAuthAuditContext } from "./auth.helpers.js";
 import { normalizeBoundedString } from "../validators.js";
 import type { ServerSettingsRow, UserRow } from "../db.types.ts";
@@ -85,30 +86,11 @@ async function loadServerAudioQuality() {
   return "standard" as const;
 }
 
-function readIntEnv(name: string, fallback: number, min: number, max: number): number {
-  const raw = Number(process.env[name]);
-  if (!Number.isFinite(raw)) {
-    return fallback;
-  }
-
-  return Math.max(min, Math.min(max, Math.round(raw)));
-}
-
-function readFloatEnv(name: string, fallback: number, min: number, max: number): number {
-  const raw = Number(process.env[name]);
-  if (!Number.isFinite(raw)) {
-    return fallback;
-  }
-
-  const normalized = Math.max(min, Math.min(max, raw));
-  return Number(normalized.toFixed(2));
-}
-
 function loadServerChatImagePolicy(): ServerChatImagePolicyResponse {
   return {
-    maxDataUrlLength: readIntEnv("CHAT_IMAGE_MAX_DATA_URL_LENGTH", 102400, 8000, 250000),
-    maxImageSide: readIntEnv("CHAT_IMAGE_MAX_SIDE", 1200, 256, 4096),
-    jpegQuality: readFloatEnv("CHAT_IMAGE_JPEG_QUALITY", 0.6, 0.3, 0.95)
+    maxDataUrlLength: config.chatImageMaxDataUrlLength,
+    maxImageSide: config.chatImageMaxSide,
+    jpegQuality: config.chatImageJpegQuality
   };
 }
 

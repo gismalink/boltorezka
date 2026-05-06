@@ -81,15 +81,18 @@ Scope: Расширение вложений чата для room chat и DM: м
 
 ### 2.4 Конфигурация лимитов (единый конфиг)
 
-- [ ] Создать отдельный конфиг-модуль для chat/media ограничений (не смешивать с разрозненными константами).
-- [ ] Перенести туда текущие chat image policy параметры.
-- [ ] Добавить новые параметры:
+- [x] Создать отдельный конфиг-модуль для chat/media ограничений (не смешивать с разрозненными константами).
+- [x] Перенести туда текущие chat image policy параметры.
+- [x] Добавить новые параметры:
   - `CHAT_UPLOAD_MAX_SIZE_BYTES` (по умолчанию 1GB);
   - `CHAT_LARGE_FILE_THRESHOLD_BYTES` (25MB);
   - `CHAT_LARGE_FILE_RETENTION_DAYS` (7);
   - `CHAT_BACKUP_MAX_FILE_SIZE_BYTES` (25MB);
   - allowlist MIME/расширений.
-- [ ] Обеспечить согласованность web + api + ops (одни и те же значения по умолчанию и документация).
+- [x] Обеспечить согласованность web + api + ops (одни и те же значения по умолчанию и документация).
+  - прогресс: API foundation сделан (единый `chat-media-config` + admin policy читает те же значения).
+  - прогресс: в host env/compose добавлены `CHAT_LARGE_FILE_THRESHOLD_BYTES`, `CHAT_LARGE_FILE_RETENTION_DAYS`, `CHAT_BACKUP_MAX_FILE_SIZE_BYTES` для test/prod.
+  - прогресс: image policy (`CHAT_IMAGE_*`) явно прокинута в test/prod compose с defaults, синхронизированными с web/api.
 
 ### 2.5 Retention и cleanup
 
@@ -107,7 +110,7 @@ Scope: Расширение вложений чата для room chat и DM: м
 ### 2.7 Документация и rollout
 
 - [ ] Обновить contracts и API docs по новому multi-file flow.
-- [ ] Обновить ops runbooks: upload limits, retention cleanup, backup filter.
+- [x] Обновить ops runbooks: upload limits, retention cleanup, backup filter.
 - [ ] Добавить migration note для уже существующих вложений и rollback steps.
 
 ### 2.8 DM P2P transfer (без хранения файла на сервере)
@@ -175,7 +178,7 @@ Scope: Расширение вложений чата для room chat и DM: м
 - [ ] Сервер принимает файлы до 1GB и корректно отклоняет больше лимита.
 - [ ] Файлы >25MB автоматически получают TTL 7 дней и удаляются cleanup job.
 - [ ] Backup flow не включает файлы >25MB.
-- [ ] Все лимиты вынесены в единый конфиг и задокументированы.
+- [x] Все лимиты вынесены в единый конфиг и задокументированы.
 - [x] Smoke test для test/prod проходит без регрессий отправки сообщений и вложений (test validated; desktop update feed шаг отдельно с known issue).
 - [ ] В DM доступен новый action `Передать файл` (не attachment).
 - [ ] Получатель подтверждает прием и выбирает путь сохранения до старта передачи.
@@ -211,6 +214,8 @@ Scope: Расширение вложений чата для room chat и DM: м
 - Deploy в test, e2e smoke + ручные сценарии (1 файл, N файлов, 1GB-1 byte, >1GB, mixed успех/ошибки).
 
 Status: completed for current scope (batch finalize + multi-file queue + progress + retry).
+
+Status update (2026-05-06): composer autosize (рост до 5 строк перед скроллом) выкачен по цепочке test -> prod.
 
 6. Stage F: DM P2P transfer MVP (test)
 - Signaling events + DM transfer rail UI + single-file direct transfer.
@@ -311,3 +316,12 @@ Status: completed for current scope (batch finalize + multi-file queue + progres
   - signaling protocol + transfer rail UI;
   - single-file offer/accept/save flow;
   - direct transfer without object storage persistence.
+
+- Iteration 4.1 (in progress): unified chat/media config foundation
+  - вынесен API-модуль `chat-media-config` для image policy + upload/retention/backup лимитов;
+  - `config.ts` переведен на единый источник chat/media defaults;
+  - `/v1/admin/server/chat-image-policy` отдает значения из runtime config, а не напрямую из env.
+  - `infra/.env.host.example` и `infra/docker-compose.host.yml` синхронизированы по новым retention/backup env-параметрам.
+  - web/api/ops defaults синхронизированы по политике 1GB/25MB/7d, добавлен ops runbook `docs/operations/CHAT_OBJECT_STORAGE_POLICY_RUNBOOK.md`.
+  - rollout в test выполнен (`553ecc6`), `deploy:test:smoke` пройден; runtime env в `datowave-api-test` подтверждает `CHAT_IMAGE_*`, `CHAT_UPLOAD_MAX_SIZE_BYTES`, `CHAT_LARGE_FILE_*`, `CHAT_BACKUP_MAX_FILE_SIZE_BYTES`.
+  - next: merge в default branch; прод-выкатка после отдельного подтверждения.
