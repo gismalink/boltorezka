@@ -47,7 +47,7 @@ TEST_REF=origin/main npm run deploy:test:smoke
 
 ```bash
 cd ~/srv/datowave
-docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host --profile test exec -T datowave-api-test env | rg 'CHAT_IMAGE|CHAT_UPLOAD_MAX_SIZE|CHAT_LARGE_FILE|CHAT_BACKUP_MAX_FILE'
+docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host --profile test exec -T datowave-api-test env | grep -E 'CHAT_IMAGE|CHAT_UPLOAD_MAX_SIZE|CHAT_LARGE_FILE|CHAT_BACKUP_MAX_FILE'
 ```
 
 4. Проверить chat-image policy endpoint:
