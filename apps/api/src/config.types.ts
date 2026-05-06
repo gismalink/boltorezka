@@ -30,7 +30,13 @@ export type AppConfig = {
   livekitApiKey: string;
   livekitApiSecret: string;
   livekitTokenTtlSec: number;
+  chatImageMaxDataUrlLength: number;
+  chatImageMaxSide: number;
+  chatImageJpegQuality: number;
   chatUploadMaxSizeBytes: number;
+  chatLargeFileThresholdBytes: number;
+  chatLargeFileRetentionDays: number;
+  chatBackupMaxFileSizeBytes: number;
   chatUploadAllowedMimeTypes: string[];
   chatUploadInitTtlSec: number;
   chatStorageProvider: "localfs" | "minio";
