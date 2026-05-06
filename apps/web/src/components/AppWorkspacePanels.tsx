@@ -16,16 +16,10 @@ import { useDmOptional } from "./dm/DmContext";
 import type { DmMessageItem } from "../api";
 import type { ChatAttachment, Message } from "../domain";
 import {
-  compressImageToDataUrl,
   normalizeImageSource,
   extractImageSourceFromClipboardHtml,
   extractImageSourceFromClipboardText
 } from "../utils/chatImagePayload";
-import {
-  DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH,
-  DEFAULT_CHAT_IMAGE_MAX_SIDE,
-  DEFAULT_CHAT_IMAGE_QUALITY
-} from "../constants/appConfig";
 
 type Translate = (key: string) => string;
 
@@ -67,12 +61,6 @@ export function AppWorkspacePanels({
     prevRoomSlugRef.current = newSlug;
   }, [chatPanelProps.roomSlug, isDmActive, dm]);
 
-  const dmImagePolicy = useMemo(() => ({
-    maxDataUrlLength: DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH,
-    maxImageSide: DEFAULT_CHAT_IMAGE_MAX_SIDE,
-    jpegQuality: DEFAULT_CHAT_IMAGE_QUALITY
-  }), []);
-
   const dmMessages: Message[] = useMemo(() => {
     if (!isDmActive || !dm) return [];
     return dm.messages.map((msg: DmMessageItem) => ({
@@ -98,32 +86,30 @@ export function AppWorkspacePanels({
     if (!dm) return;
 
     const clipboard = event.clipboardData;
-    const files = Array.from(clipboard?.files || []);
-    const imageFile = files.find((file) => file.type.startsWith("image/"))
-      || Array.from(clipboard?.items || [])
-        .map((item) => item.getAsFile())
-        .find((file): file is File => Boolean(file && file.type.startsWith("image/")));
+    const files = Array.from(clipboard?.files || []).filter((file): file is File => file instanceof File);
+    const itemFiles = Array.from(clipboard?.items || [])
+      .map((item) => item.getAsFile())
+      .filter((file): file is File => Boolean(file));
+    const attachedFiles = [...files, ...itemFiles];
 
     const htmlImageSource = normalizeImageSource(extractImageSourceFromClipboardHtml(String(clipboard?.getData("text/html") || "")));
     const textImageSource = normalizeImageSource(extractImageSourceFromClipboardText(String(clipboard?.getData("text/plain") || "")));
-    const hasImagePayload = Boolean(imageFile || htmlImageSource || textImageSource);
+    const hasImagePayload = Boolean(attachedFiles.length > 0 || htmlImageSource || textImageSource);
     if (!hasImagePayload) return;
 
     event.preventDefault();
     void (async () => {
       try {
-        if (imageFile) {
-          const dataUrl = await compressImageToDataUrl(imageFile, dmImagePolicy);
-          dm.setPendingDmImageDataUrl(dataUrl);
+        if (attachedFiles.length > 0) {
+          dm.selectPendingDmAttachmentFiles(attachedFiles);
           return;
         }
 
         if (htmlImageSource.startsWith("data:image/")) {
           const response = await fetch(htmlImageSource);
           const blob = await response.blob();
-          const synthesizedFile = new File([blob], "clipboard-image", { type: blob.type || "image/png" });
-          const dataUrl = await compressImageToDataUrl(synthesizedFile, dmImagePolicy);
-          dm.setPendingDmImageDataUrl(dataUrl);
+          const synthesizedFile = new File([blob], `clipboard-image-${Date.now()}.png`, { type: blob.type || "image/png" });
+          dm.selectPendingDmAttachmentFiles([synthesizedFile]);
           return;
         }
 
@@ -135,16 +121,15 @@ export function AppWorkspacePanels({
         if (textImageSource.startsWith("data:image/")) {
           const response = await fetch(textImageSource);
           const blob = await response.blob();
-          const synthesizedFile = new File([blob], "clipboard-image", { type: blob.type || "image/png" });
-          const dataUrl = await compressImageToDataUrl(synthesizedFile, dmImagePolicy);
-          dm.setPendingDmImageDataUrl(dataUrl);
+          const synthesizedFile = new File([blob], `clipboard-image-${Date.now()}.png`, { type: blob.type || "image/png" });
+          dm.selectPendingDmAttachmentFiles([synthesizedFile]);
           return;
         }
       } catch {
         // compression/fetch error — ignore
       }
     })();
-  }, [dm, dmImagePolicy]);
+  }, [dm]);
 
   const dmHeaderSlot = isDmActive && dm ? (
     <div className="flex items-center gap-2 border-b border-[var(--pixel-border)] px-4 py-2">
@@ -280,10 +265,24 @@ export function AppWorkspacePanels({
         onSetTopicMentionUnreadLocal: noop,
         onApplyTopicReadLocal: noop,
         composePreviewImageUrl: dm.pendingDmImageDataUrl,
-        composePendingAttachments: [],
-        onSelectAttachmentFiles: () => {},
-        onRemovePendingAttachmentAt: () => {},
-        onRetryPendingAttachmentAt: () => {},
+        composePendingAttachments: dm.pendingDmAttachmentFiles.map((file) => {
+          const key = `${String(file.name || "")}:${Number(file.size || 0)}:${Number(file.lastModified || 0)}`;
+          const state = dm.pendingDmAttachmentStateByKey[key] || { state: "queued" as const, progress: 0 };
+          return {
+            id: key,
+            name: String(file.name || "file"),
+            sizeBytes: Number(file.size || 0),
+            uploadState: state.state,
+            uploadProgress: state.progress
+          };
+        }),
+        onSelectAttachmentFiles: (files) => dm.selectPendingDmAttachmentFiles(files),
+        onRemovePendingAttachmentAt: (index) => dm.removePendingDmAttachmentAt(index),
+        onRetryPendingAttachmentAt: (index) => dm.retryPendingDmAttachmentAt(index),
+        onClearPendingAttachment: () => {
+          dm.setPendingDmImageDataUrl(null);
+          dm.clearPendingDmAttachments();
+        },
         mentionCandidates: [],
         typingUsers: [],
         canManageTopicModeration: false,

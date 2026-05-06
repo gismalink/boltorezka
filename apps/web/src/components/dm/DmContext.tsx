@@ -24,6 +24,8 @@ type DmState = {
   dmText: string;
   loading: boolean;
   pendingDmImageDataUrl: string | null;
+  pendingDmAttachmentFiles: File[];
+  pendingDmAttachmentStateByKey: Record<string, { state: "queued" | "uploading" | "uploaded" | "failed"; progress: number }>;
   /** Raw reaction rows for the active thread */
   dmReactions: Array<{ messageId: string; emoji: string; userId: string }>;
   /** Message ID at which unread divider should appear (first unread msg) */
@@ -40,6 +42,10 @@ type DmActions = {
   loadOlderMessages: () => Promise<void>;
   setDmText: (text: string) => void;
   setPendingDmImageDataUrl: (url: string | null) => void;
+  selectPendingDmAttachmentFiles: (files: File[]) => void;
+  removePendingDmAttachmentAt: (index: number) => void;
+  retryPendingDmAttachmentAt: (index: number) => void;
+  clearPendingDmAttachments: () => void;
   handleDmRealtimeEvent: (type: string, payload: unknown) => void;
 };
 
@@ -73,6 +79,10 @@ export function DmProvider({ token, onDmOpen, onDmClose, children }: { token: st
   const [dmText, setDmText] = useState("");
   const [loading, setLoading] = useState(false);
   const [pendingDmImageDataUrl, setPendingDmImageDataUrl] = useState<string | null>(null);
+  const [pendingDmAttachmentFiles, setPendingDmAttachmentFiles] = useState<File[]>([]);
+  const [pendingDmAttachmentStateByKey, setPendingDmAttachmentStateByKey] = useState<
+    Record<string, { state: "queued" | "uploading" | "uploaded" | "failed"; progress: number }>
+  >({});
   const cursorRef = useRef<string | null>(null);
   const [dmReactions, setDmReactions] = useState<Array<{ messageId: string; emoji: string; userId: string }>>([]);
   const [dmUnreadDividerMessageId, setDmUnreadDividerMessageId] = useState<string | null>(null);
@@ -183,14 +193,157 @@ export function DmProvider({ token, onDmOpen, onDmClose, children }: { token: st
     setMessagesHasMore(false);
     setDmText("");
     setPendingDmImageDataUrl(null);
+    setPendingDmAttachmentFiles([]);
+    setPendingDmAttachmentStateByKey({});
     setDmReactions([]);
     setDmUnreadDividerMessageId(null);
     cursorRef.current = null;
   }, [onDmClose]);
 
+  const buildPendingAttachmentFileKey = useCallback((file: Pick<File, "name" | "size" | "lastModified">) => {
+    return `${String(file.name || "")}:${Number(file.size || 0)}:${Number(file.lastModified || 0)}`;
+  }, []);
+
+  const selectPendingDmAttachmentFiles = useCallback((files: File[]) => {
+    const safeFiles = Array.isArray(files) ? files.filter((item): item is File => item instanceof File) : [];
+    if (safeFiles.length === 0) {
+      return;
+    }
+
+    setPendingDmAttachmentFiles((prev) => [...prev, ...safeFiles]);
+    setPendingDmAttachmentStateByKey((prev) => {
+      const next = { ...prev };
+      safeFiles.forEach((file) => {
+        const key = buildPendingAttachmentFileKey(file);
+        next[key] = { state: "queued", progress: 0 };
+      });
+      return next;
+    });
+  }, [buildPendingAttachmentFileKey]);
+
+  const removePendingDmAttachmentAt = useCallback((index: number) => {
+    setPendingDmAttachmentFiles((prev) => {
+      if (index < 0 || index >= prev.length) {
+        return prev;
+      }
+
+      const target = prev[index];
+      const key = buildPendingAttachmentFileKey(target);
+      setPendingDmAttachmentStateByKey((statePrev) => {
+        if (!statePrev[key]) {
+          return statePrev;
+        }
+
+        const next = { ...statePrev };
+        delete next[key];
+        return next;
+      });
+
+      return prev.filter((_, itemIndex) => itemIndex !== index);
+    });
+  }, [buildPendingAttachmentFileKey]);
+
+  const retryPendingDmAttachmentAt = useCallback((index: number) => {
+    setPendingDmAttachmentFiles((prev) => {
+      if (index < 0 || index >= prev.length) {
+        return prev;
+      }
+
+      const key = buildPendingAttachmentFileKey(prev[index]);
+      setPendingDmAttachmentStateByKey((statePrev) => ({
+        ...statePrev,
+        [key]: { state: "queued", progress: 0 }
+      }));
+      return prev;
+    });
+  }, [buildPendingAttachmentFileKey]);
+
+  const clearPendingDmAttachments = useCallback(() => {
+    setPendingDmAttachmentFiles([]);
+    setPendingDmAttachmentStateByKey({});
+  }, []);
+
   const sendDmMessage = useCallback(async (text: string, imageDataUrl?: string | null, replyToMessageId?: string) => {
     if (!activeThreadId || !token) return;
-    if (!text.trim() && !imageDataUrl) return;
+    if (!text.trim() && !imageDataUrl && pendingDmAttachmentFiles.length === 0) return;
+
+    if (pendingDmAttachmentFiles.length > 0) {
+      try {
+        const files = pendingDmAttachmentFiles.filter((item): item is File => item instanceof File);
+        for (let index = 0; index < files.length; index += 1) {
+          const file = files[index];
+          const fileKey = buildPendingAttachmentFileKey(file);
+          const mimeType = String(file.type || "application/octet-stream").trim().toLowerCase();
+          const sizeBytes = Number(file.size || 0);
+          if (!mimeType || sizeBytes <= 0) {
+            setPendingDmAttachmentStateByKey((prev) => ({
+              ...prev,
+              [fileKey]: { state: "failed", progress: 0 }
+            }));
+            continue;
+          }
+
+          setPendingDmAttachmentStateByKey((prev) => ({
+            ...prev,
+            [fileKey]: { state: "uploading", progress: 8 }
+          }));
+
+          const init = await api.dmUploadInit(token, activeThreadId, { mimeType, sizeBytes });
+          await api.uploadChatObject(
+            init.uploadUrl,
+            file,
+            init.requiredHeaders || { "content-type": mimeType },
+            {
+              onProgress: ({ loadedBytes, totalBytes }) => {
+                const safeTotal = Number(totalBytes || sizeBytes || 0);
+                const safeLoaded = Number(loadedBytes || 0);
+                const ratio = safeTotal > 0 ? safeLoaded / safeTotal : 0;
+                const progress = 12 + Math.round(Math.max(0, Math.min(1, ratio)) * 78);
+                setPendingDmAttachmentStateByKey((prev) => ({
+                  ...prev,
+                  [fileKey]: { state: "uploading", progress }
+                }));
+              }
+            }
+          );
+
+          const result = await api.dmUploadFinalize(token, activeThreadId, {
+            uploadId: init.uploadId,
+            storageKey: init.storageKey,
+            mimeType,
+            sizeBytes,
+            text: index === 0 ? text.trim() : ""
+          });
+
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === result.message.id)) return prev;
+            return [...prev, result.message];
+          });
+
+          setPendingDmAttachmentStateByKey((prev) => ({
+            ...prev,
+            [fileKey]: { state: "uploaded", progress: 100 }
+          }));
+        }
+
+        setDmText("");
+        setPendingDmImageDataUrl(null);
+        setPendingDmAttachmentFiles([]);
+        setPendingDmAttachmentStateByKey({});
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("datowave:chat:own-send"));
+        }
+      } catch {
+        setPendingDmAttachmentFiles.forEach((file) => {
+          const fileKey = buildPendingAttachmentFileKey(file);
+          setPendingDmAttachmentStateByKey((prev) => ({
+            ...prev,
+            [fileKey]: { state: "failed", progress: 0 }
+          }));
+        });
+      }
+      return;
+    }
 
     if (imageDataUrl) {
       try {
@@ -235,7 +388,7 @@ export function DmProvider({ token, onDmOpen, onDmClose, children }: { token: st
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("datowave:chat:own-send"));
     }
-  }, [activeThreadId, token]);
+  }, [activeThreadId, token, pendingDmAttachmentFiles, buildPendingAttachmentFileKey]);
 
   const editDmMessage = useCallback(async (messageId: string, body: string) => {
     if (!token) return;
@@ -371,6 +524,8 @@ export function DmProvider({ token, onDmOpen, onDmClose, children }: { token: st
     dmText,
     loading,
     pendingDmImageDataUrl,
+    pendingDmAttachmentFiles,
+    pendingDmAttachmentStateByKey,
     dmReactions,
     dmUnreadDividerMessageId,
     openDm,
@@ -382,6 +537,10 @@ export function DmProvider({ token, onDmOpen, onDmClose, children }: { token: st
     loadOlderMessages,
     setDmText,
     setPendingDmImageDataUrl,
+    selectPendingDmAttachmentFiles,
+    removePendingDmAttachmentAt,
+    retryPendingDmAttachmentAt,
+    clearPendingDmAttachments,
     handleDmRealtimeEvent
   };
 
