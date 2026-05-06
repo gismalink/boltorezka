@@ -323,4 +323,5 @@ Status update (2026-05-06): composer autosize (рост до 5 строк пер
   - `/v1/admin/server/chat-image-policy` отдает значения из runtime config, а не напрямую из env.
   - `infra/.env.host.example` и `infra/docker-compose.host.yml` синхронизированы по новым retention/backup env-параметрам.
   - web/api/ops defaults синхронизированы по политике 1GB/25MB/7d, добавлен ops runbook `docs/operations/CHAT_OBJECT_STORAGE_POLICY_RUNBOOK.md`.
-  - next: rollout в test + smoke сценарии под новые policy defaults.
+  - rollout в test выполнен (`553ecc6`), `deploy:test:smoke` пройден; runtime env в `datowave-api-test` подтверждает `CHAT_IMAGE_*`, `CHAT_UPLOAD_MAX_SIZE_BYTES`, `CHAT_LARGE_FILE_*`, `CHAT_BACKUP_MAX_FILE_SIZE_BYTES`.
+  - next: merge в default branch; прод-выкатка после отдельного подтверждения.
