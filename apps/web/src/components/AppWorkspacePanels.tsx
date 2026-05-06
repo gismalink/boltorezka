@@ -90,7 +90,12 @@ export function AppWorkspacePanels({
     const itemFiles = Array.from(clipboard?.items || [])
       .map((item) => item.getAsFile())
       .filter((file): file is File => Boolean(file));
-    const attachedFiles = [...files, ...itemFiles];
+    const attachedFiles = Array.from(new Map(
+      [...files, ...itemFiles].map((file) => {
+        const dedupeKey = `${String(file.name || "")}:${String(file.type || "")}:${Number(file.size || 0)}:${Number(file.lastModified || 0)}`;
+        return [dedupeKey, file] as const;
+      })
+    ).values());
 
     const htmlImageSource = normalizeImageSource(extractImageSourceFromClipboardHtml(String(clipboard?.getData("text/html") || "")));
     const textImageSource = normalizeImageSource(extractImageSourceFromClipboardText(String(clipboard?.getData("text/plain") || "")));
