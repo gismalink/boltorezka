@@ -334,7 +334,7 @@ export function DmProvider({ token, onDmOpen, onDmClose, children }: { token: st
           window.dispatchEvent(new CustomEvent("datowave:chat:own-send"));
         }
       } catch {
-        setPendingDmAttachmentFiles.forEach((file) => {
+        pendingDmAttachmentFiles.forEach((file) => {
           const fileKey = buildPendingAttachmentFileKey(file);
           setPendingDmAttachmentStateByKey((prev) => ({
             ...prev,
