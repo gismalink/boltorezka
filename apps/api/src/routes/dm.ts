@@ -32,6 +32,7 @@ import {
   ChatObjectStorageNotFoundError,
   createChatObjectStorage
 } from "../storage/chat-object-storage.js";
+import { deriveAttachmentMetadata } from "../chat-attachment-metadata.js";
 import { normalizeBoundedString } from "../validators.js";
 
 const AUTH_MIDDLEWARE = [requireAuth, requireServiceAccess];
@@ -431,14 +432,14 @@ export async function dmRoutes(fastify: FastifyInstance) {
 
   const dmInitUploadSchema = z.object({
     mimeType: z.string().trim().min(1).max(128),
-    sizeBytes: z.number().int().positive().max(50 * 1024 * 1024)
+    sizeBytes: z.number().int().positive()
   });
 
   const dmFinalizeUploadSchema = z.object({
     uploadId: z.string().trim().uuid(),
     storageKey: z.string().trim().min(4).max(512),
     mimeType: z.string().trim().min(1).max(128),
-    sizeBytes: z.number().int().positive().max(50 * 1024 * 1024),
+    sizeBytes: z.number().int().positive(),
     text: z.string().trim().max(4000).optional().default("")
   });
 
@@ -622,6 +623,8 @@ export async function dmRoutes(fastify: FastifyInstance) {
       }
 
       const downloadUrl = buildDmDownloadUrl(String(reservation.storageKey));
+      const createdAt = new Date().toISOString();
+      const derivedAttachmentMetadata = deriveAttachmentMetadata(reservation.sizeBytes, createdAt);
 
       const attachmentsJson = [{
         id: randomUUID(),
@@ -630,10 +633,12 @@ export async function dmRoutes(fastify: FastifyInstance) {
         download_url: downloadUrl,
         mime_type: String(reservation.mimeType),
         size_bytes: Number(reservation.sizeBytes),
+        size_class: derivedAttachmentMetadata.sizeClass,
+        expires_at: derivedAttachmentMetadata.expiresAt,
         width: null,
         height: null,
         checksum: typeof uploadedObject.checksum === "string" ? uploadedObject.checksum : null,
-        created_at: new Date().toISOString()
+        created_at: createdAt
       }];
 
       const peerUserId = getThreadPeerUserId(thread, userId);

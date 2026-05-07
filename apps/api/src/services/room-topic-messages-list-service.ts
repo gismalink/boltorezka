@@ -1,6 +1,7 @@
 import { db } from "../db.js";
 import type { RoomMessageRow, RoomRow, RoomTopicRow } from "../db.types.ts";
 import { ensureTopicReadAccess, loadTopicWithRoom, mapRoom, type TopicWithRoomRow } from "./room-topic-messages-core.js";
+import { enrichRoomMessageAttachments } from "../chat-attachment-metadata.js";
 import { normalizeBoundedString } from "../validators.js";
 
 export type TopicMessageCursor = {
@@ -153,6 +154,8 @@ async function loadMessagesAroundAnchor(topicId: string, aroundIds: string[], us
              'download_url', ma.download_url,
              'mime_type', ma.mime_type,
              'size_bytes', ma.size_bytes,
+             'size_class', ma.size_class,
+             'expires_at', ma.expires_at,
              'width', ma.width,
              'height', ma.height,
              'checksum', ma.checksum,
@@ -236,6 +239,8 @@ async function loadPagedTopicMessages(input: ListTopicMessagesInput): Promise<Ro
                'download_url', ma.download_url,
                'mime_type', ma.mime_type,
                'size_bytes', ma.size_bytes,
+               'size_class', ma.size_class,
+               'expires_at', ma.expires_at,
                'width', ma.width,
                'height', ma.height,
                'checksum', ma.checksum,
@@ -304,6 +309,8 @@ async function loadPagedTopicMessages(input: ListTopicMessagesInput): Promise<Ro
              'download_url', ma.download_url,
              'mime_type', ma.mime_type,
              'size_bytes', ma.size_bytes,
+             'size_class', ma.size_class,
+             'expires_at', ma.expires_at,
              'width', ma.width,
              'height', ma.height,
              'checksum', ma.checksum,
@@ -380,12 +387,13 @@ export async function listTopicMessages(input: {
       const aroundMessages = await loadMessagesAroundAnchor(input.topicId, aroundIds, input.userId);
       const oldestInPage = aroundMessages[0] || null;
       const hasMore = await hasOlderMessages(input.topicId, oldestInPage);
+      const enrichedAroundMessages = aroundMessages.map((message) => enrichRoomMessageAttachments(message));
 
       return {
         room: mapRoom(topic),
         topic: mapTopicSummary(topic),
         unreadDividerMessageId,
-        messages: aroundMessages,
+        messages: enrichedAroundMessages,
         pagination: {
           hasMore,
           nextCursor: buildNextCursor(oldestInPage, hasMore)
@@ -404,7 +412,7 @@ export async function listTopicMessages(input: {
     room: mapRoom(topic),
     topic: mapTopicSummary(topic),
     unreadDividerMessageId,
-    messages: pageDesc.reverse(),
+    messages: pageDesc.reverse().map((message) => enrichRoomMessageAttachments(message)),
     pagination: {
       hasMore,
       nextCursor: buildNextCursor(oldestInPage, hasMore)

@@ -1,5 +1,6 @@
 // DM-сервис: CRUD сообщений, пагинация, редактирование, удаление.
 import { db } from "../db.js";
+import { enrichDmAttachmentsJson } from "../chat-attachment-metadata.js";
 
 // ─── types ──────────────────────────────────────────────
 
@@ -20,6 +21,13 @@ export type DmMessage = {
 };
 
 const EDIT_WINDOW_MS = 10 * 60 * 1000;
+
+function withDerivedAttachmentMetadata(message: DmMessage): DmMessage {
+  return {
+    ...message,
+    attachmentsJson: enrichDmAttachmentsJson(message.attachmentsJson)
+  };
+}
 
 // ─── send ───────────────────────────────────────────────
 
@@ -48,7 +56,7 @@ export async function sendDmMessage(params: {
   // Обновляем updated_at на thread для сортировки
   await db.query(`UPDATE dm_threads SET updated_at = now() WHERE id = $1`, [params.threadId]);
 
-  return result.rows[0];
+  return withDerivedAttachmentMetadata(result.rows[0]);
 }
 
 // ─── edit ───────────────────────────────────────────────
@@ -93,7 +101,7 @@ export async function editDmMessage(params: {
     [params.messageId, params.body]
   );
 
-  return result.rows[0];
+  return withDerivedAttachmentMetadata(result.rows[0]);
 }
 
 // ─── delete ─────────────────────────────────────────────
@@ -188,7 +196,7 @@ export async function getDmMessages(params: {
     messages = messages.slice(0, limit);
   }
 
-  return { messages, hasMore };
+  return { messages: messages.map((message) => withDerivedAttachmentMetadata(message)), hasMore };
 }
 
 // ─── reactions ──────────────────────────────────────────

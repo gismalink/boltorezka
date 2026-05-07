@@ -33,6 +33,50 @@ Runtime считывает значения через API модуль `apps/ap
 - DB backup scripts бэкапят Postgres и не включают object storage payloads.
 - Для object storage нужен отдельный cleanup/backup контур (см. roadmap/plan по attachments v2).
 
+### 3.1 Large-file retention cleanup (admin API)
+
+Endpoint:
+- `POST /v1/admin/chat/uploads/large-retention-cleanup`
+
+Body:
+- `dryRun` (`true|false`, default `true`)
+- `thresholdBytes` (default `CHAT_LARGE_FILE_THRESHOLD_BYTES`)
+- `retentionDays` (default `CHAT_LARGE_FILE_RETENTION_DAYS`)
+- `maxDelete` (default `200`, max `1000`)
+
+Поведение:
+- выбирает `message_attachments` c `size_bytes > thresholdBytes` и `created_at <= now-retentionDays`;
+- `dryRun=true`: только отчет;
+- `dryRun=false`: удаляет object storage payload и затем ссылку в `message_attachments`.
+
+Ops script:
+- `scripts/ops/chat-large-retention-cleanup.sh`
+- scheduler job manifest: `scripts/ops/scheduler/jobs/chat-large-retention-cleanup.env`
+
+Примеры:
+
+```bash
+# Dry-run в test
+cd ~/srv/datowave
+CHAT_LARGE_RETENTION_BASE_URL=https://test.datowave.com \
+CHAT_LARGE_RETENTION_DRY_RUN=1 \
+bash ./scripts/ops/chat-large-retention-cleanup.sh
+
+# Apply с лимитом удаления (после dry-run)
+cd ~/srv/datowave
+CHAT_LARGE_RETENTION_BASE_URL=https://test.datowave.com \
+CHAT_LARGE_RETENTION_DRY_RUN=0 \
+CHAT_LARGE_RETENTION_MAX_DELETE=100 \
+bash ./scripts/ops/chat-large-retention-cleanup.sh
+```
+
+Установка периодического запуска (launchd):
+
+```bash
+cd ~/srv/datowave
+bash ./scripts/ops/scheduler/install-launchd-job.sh chat-large-retention-cleanup
+```
+
 ## 4) Test-first rollout
 
 1. Обновить значения в `infra/.env.host` (при необходимости).

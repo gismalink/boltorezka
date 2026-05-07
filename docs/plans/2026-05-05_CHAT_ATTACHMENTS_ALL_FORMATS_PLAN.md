@@ -34,8 +34,8 @@ Scope: Расширение вложений чата для room chat и DM: м
 ### 2.1 Backend API и модель данных
 
 - [x] Расширить контракт upload/finalize для пакетного сценария (батч attach перед send) без ломки одиночного режима.
-- [ ] Ввести в metadata вложения признак класса размера (`small` <=25MB, `large` >25MB) и `expiresAt` для large.
-- [ ] Добавить server-side валидацию размера до 1GB (через конфиг), единый код ошибок для oversize.
+- [x] Ввести в metadata вложения признак класса размера (`small` <=25MB, `large` >25MB) и `expiresAt` для large.
+- [x] Добавить server-side валидацию размера до 1GB (через конфиг), единый код ошибок для oversize.
 - [ ] Уточнить определение типа вложения: не ограничивать продукт до image/document/audio, хранить MIME и category вычислять отдельно для UI.
 - [ ] Сохранить обратную совместимость выдачи attachments для уже существующих сообщений.
 
@@ -97,8 +97,8 @@ Scope: Расширение вложений чата для room chat и DM: м
 ### 2.5 Retention и cleanup
 
 - [ ] Реализовать плановый cleanup job для large-файлов по `expiresAt` (удаление объекта + cleanup ссылок).
-- [ ] Добавить dry-run режим и отчетность cleanup (сколько найдено/удалено/ошибок).
-- [ ] Добавить метрики retention cleanup и алерты на рост ошибок удаления.
+- [x] Добавить dry-run режим и отчетность cleanup (сколько найдено/удалено/ошибок).
+- [x] Добавить метрики retention cleanup и алерты на рост ошибок удаления.
 
 ### 2.6 Backup политика файлов
 
@@ -216,6 +216,7 @@ Scope: Расширение вложений чата для room chat и DM: м
 Status: completed for current scope (batch finalize + multi-file queue + progress + retry).
 
 Status update (2026-05-06): composer autosize (рост до 5 строк перед скроллом) выкачен по цепочке test -> prod.
+Status update (2026-05-06): unified chat/media config + DM multi-attachment parity + DM paste dedupe выкачены по цепочке feature -> test -> main -> prod.
 
 6. Stage F: DM P2P transfer MVP (test)
 - Signaling events + DM transfer rail UI + single-file direct transfer.
@@ -317,11 +318,22 @@ Status update (2026-05-06): composer autosize (рост до 5 строк пер
   - single-file offer/accept/save flow;
   - direct transfer without object storage persistence.
 
-- Iteration 4.1 (in progress): unified chat/media config foundation
+- Iteration 4.1 (completed): unified chat/media config foundation
   - вынесен API-модуль `chat-media-config` для image policy + upload/retention/backup лимитов;
   - `config.ts` переведен на единый источник chat/media defaults;
   - `/v1/admin/server/chat-image-policy` отдает значения из runtime config, а не напрямую из env.
   - `infra/.env.host.example` и `infra/docker-compose.host.yml` синхронизированы по новым retention/backup env-параметрам.
   - web/api/ops defaults синхронизированы по политике 1GB/25MB/7d, добавлен ops runbook `docs/operations/CHAT_OBJECT_STORAGE_POLICY_RUNBOOK.md`.
-  - rollout в test выполнен (`553ecc6`), `deploy:test:smoke` пройден; runtime env в `datowave-api-test` подтверждает `CHAT_IMAGE_*`, `CHAT_UPLOAD_MAX_SIZE_BYTES`, `CHAT_LARGE_FILE_*`, `CHAT_BACKUP_MAX_FILE_SIZE_BYTES`.
-  - next: merge в default branch; прод-выкатка после отдельного подтверждения.
+  - rollout test/prod завершен (серия merge-коммитов `b0a39cd`, `7f3524a`, `b6d4638`, `750bc42`), smoke post-deploy пройден.
+
+- Iteration 4.2 (in progress): backend cleanup после rollout
+  - убраны захардкоженные `50MB` caps в zod-схемах upload (room + DM);
+  - effective limit целиком берется из runtime config `CHAT_UPLOAD_MAX_SIZE_BYTES` (default 1GB);
+  - добавлен shared derived metadata layer для attachments: `sizeClass`/`expiresAt` в room/DM API payload и realtime attachments;
+  - добавлен admin endpoint `POST /v1/admin/chat/uploads/large-retention-cleanup` (dry-run/apply, threshold + retentionDays + maxDelete);
+  - добавлен ops script `scripts/ops/chat-large-retention-cleanup.sh` + runbook usage;
+  - добавлен scheduler manifest `scripts/ops/scheduler/jobs/chat-large-retention-cleanup.env` (daily dry-run в test);
+  - `slo-rolling-gate` расширен alert-порогом по retention delete failures (`SLO_LARGE_RETENTION_FAIL_30M_MAX`);
+  - добавлена DB migration `0032_message_attachments_retention_metadata.sql` (`size_class` + `expires_at` + backfill + indexes);
+  - retention cleanup query переключен на persisted `size_class`/`expires_at` (с fallback на старые записи без `expires_at`);
+  - next: test rollout migration + dry-run evidence + controlled apply в test.
