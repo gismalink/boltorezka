@@ -336,4 +336,6 @@ Status update (2026-05-06): unified chat/media config + DM multi-attachment pari
   - `slo-rolling-gate` расширен alert-порогом по retention delete failures (`SLO_LARGE_RETENTION_FAIL_30M_MAX`);
   - добавлена DB migration `0032_message_attachments_retention_metadata.sql` (`size_class` + `expires_at` + backfill + indexes);
   - retention cleanup query переключен на persisted `size_class`/`expires_at` (с fallback на старые записи без `expires_at`);
-  - next: test rollout migration + dry-run evidence + controlled apply в test.
+  - test rollout выполнен на `origin/feature/chat-retention-persisted-metadata` (`42d1e24`), postdeploy smoke green при `SMOKE_DESKTOP_UPDATE_FEED=0` (known flaky desktop update feed шаг);
+  - feature merged в `main` (`ec68b65`), готово к prod rollout после явного подтверждения.
+  - next: controlled apply cleanup в test (`CHAT_LARGE_RETENTION_DRY_RUN=0`) и затем prod rollout по подтверждению.
