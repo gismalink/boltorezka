@@ -9,6 +9,7 @@ import { isServerAgeConfirmed } from "../services/age-verification-service.js";
 import { resolveEffectiveServerPermissions } from "../services/server-permissions-service.js";
 import { buildChatMessageEnvelope } from "../ws-protocol.js";
 import { emitMentionInboxEvents } from "../services/notification-inbox-service.js";
+import { enrichRoomMessageAttachments } from "../chat-attachment-metadata.js";
 import { normalizeBoundedString } from "../validators.js";
 import type {
   RoomCategoryCreateResponse,
@@ -1500,6 +1501,8 @@ export async function roomsRoutes(fastify: FastifyInstance) {
                      'download_url', ma.download_url,
                      'mime_type', ma.mime_type,
                      'size_bytes', ma.size_bytes,
+                     'size_class', ma.size_class,
+                     'expires_at', ma.expires_at,
                      'width', ma.width,
                      'height', ma.height,
                      'checksum', ma.checksum,
@@ -1537,6 +1540,8 @@ export async function roomsRoutes(fastify: FastifyInstance) {
                      'download_url', ma.download_url,
                      'mime_type', ma.mime_type,
                      'size_bytes', ma.size_bytes,
+                     'size_class', ma.size_class,
+                     'expires_at', ma.expires_at,
                      'width', ma.width,
                      'height', ma.height,
                      'checksum', ma.checksum,
@@ -1559,9 +1564,11 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       const pageDesc = hasMore ? messagesResult.rows.slice(0, limit) : messagesResult.rows;
       const oldestInPage = pageDesc[pageDesc.length - 1] || null;
 
+      const responseMessages = pageDesc.reverse().map((message) => enrichRoomMessageAttachments(message));
+
       const response: RoomMessagesResponse = {
         room,
-        messages: pageDesc.reverse(),
+        messages: responseMessages,
         pagination: {
           hasMore,
           nextCursor: hasMore && oldestInPage

@@ -10,6 +10,10 @@ import {
   ChatObjectStorageNotFoundError,
   createChatObjectStorage
 } from "../storage/chat-object-storage.js";
+import {
+  deriveAttachmentMetadata,
+  enrichMessageAttachmentRow
+} from "../chat-attachment-metadata.js";
 import { normalizeBoundedString, normalizeOptionalString } from "../validators.js";
 import { canBypassRoomSendPolicy } from "../services/room-access-service.js";
 import { isServerAgeConfirmed } from "../services/age-verification-service.js";
@@ -60,7 +64,7 @@ const initUploadSchema = z.object({
   roomSlug: z.string().trim().min(1).max(128),
   topicId: z.string().trim().uuid().optional(),
   mimeType: z.string().trim().min(1).max(128),
-  sizeBytes: z.number().int().positive().max(50 * 1024 * 1024)
+  sizeBytes: z.number().int().positive()
 });
 
 const finalizeUploadSchema = z.object({
@@ -69,7 +73,7 @@ const finalizeUploadSchema = z.object({
   topicId: z.string().trim().uuid().optional(),
   storageKey: z.string().trim().min(4).max(512),
   mimeType: z.string().trim().min(1).max(128),
-  sizeBytes: z.number().int().positive().max(50 * 1024 * 1024),
+  sizeBytes: z.number().int().positive(),
   text: z.string().trim().max(20000).optional().default(""),
   downloadUrl: z.string().trim().url().max(2048).optional(),
   width: z.number().int().positive().optional(),
@@ -86,7 +90,7 @@ const finalizeBatchUploadSchema = z.object({
     uploadId: z.string().trim().uuid(),
     storageKey: z.string().trim().min(4).max(512),
     mimeType: z.string().trim().min(1).max(128),
-    sizeBytes: z.number().int().positive().max(50 * 1024 * 1024),
+    sizeBytes: z.number().int().positive(),
     downloadUrl: z.string().trim().url().max(2048).optional(),
     width: z.number().int().positive().optional(),
     height: z.number().int().positive().optional(),
@@ -99,6 +103,13 @@ const orphanCleanupSchema = z.object({
   olderThanSec: z.number().int().min(0).max(60 * 60 * 24 * 30).default(3600),
   dryRun: z.boolean().default(true),
   maxScan: z.number().int().min(1).max(10000).default(1000),
+  maxDelete: z.number().int().min(1).max(1000).default(200)
+});
+
+const largeRetentionCleanupSchema = z.object({
+  dryRun: z.boolean().default(true),
+  thresholdBytes: z.number().int().positive().default(config.chatLargeFileThresholdBytes),
+  retentionDays: z.number().int().min(1).max(365).default(config.chatLargeFileRetentionDays),
   maxDelete: z.number().int().min(1).max(1000).default(200)
 });
 
@@ -674,6 +685,116 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
   );
 
   fastify.post<{ Body: unknown }>(
+    "/v1/admin/chat/uploads/large-retention-cleanup",
+    {
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser, requireRole(["admin", "super_admin"])]
+    },
+    async (request, reply) => {
+      const parsed = largeRetentionCleanupSchema.safeParse(request.body || {});
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsed.error.flatten()
+        });
+      }
+
+      const cutoffIso = new Date(Date.now() - parsed.data.retentionDays * 24 * 60 * 60 * 1000).toISOString();
+      const candidateResult = await db.query<{
+        id: string;
+        storage_key: string;
+        size_bytes: number;
+        size_class: string;
+        expires_at: string | null;
+        created_at: string;
+      }>(
+        `SELECT id, storage_key, size_bytes, size_class, expires_at, created_at
+           FROM message_attachments
+          WHERE (
+            (size_class = 'large' AND expires_at IS NOT NULL AND expires_at <= NOW())
+            OR (expires_at IS NULL AND size_bytes > $1 AND created_at <= $2::timestamptz)
+          )
+          ORDER BY COALESCE(expires_at, created_at) ASC
+          LIMIT $3`,
+        [parsed.data.thresholdBytes, cutoffIso, parsed.data.maxDelete]
+      );
+
+      const candidates = candidateResult.rows;
+      const deletedObjectKeys: string[] = [];
+      const deletedAttachmentIds: string[] = [];
+      const failedObjectDeleteKeys: string[] = [];
+      const failedDbDeleteIds: string[] = [];
+
+      if (!parsed.data.dryRun) {
+        for (const candidate of candidates) {
+          const storageKey = normalizeBoundedString(candidate.storage_key, 512) || "";
+          if (!storageKey) {
+            failedObjectDeleteKeys.push("<invalid-storage-key>");
+            continue;
+          }
+
+          try {
+            await chatObjectStorage.deleteObject(storageKey);
+            deletedObjectKeys.push(storageKey);
+          } catch (error) {
+            failedObjectDeleteKeys.push(storageKey);
+            request.log.error({ err: error, storageKey }, "chat large retention object delete failed");
+            continue;
+          }
+
+          try {
+            await db.query(
+              `DELETE FROM message_attachments
+                WHERE id = $1`,
+              [candidate.id]
+            );
+            deletedAttachmentIds.push(candidate.id);
+          } catch (error) {
+            failedDbDeleteIds.push(candidate.id);
+            request.log.error({ err: error, attachmentId: candidate.id }, "chat large retention attachment delete failed");
+          }
+        }
+
+        if (deletedObjectKeys.length > 0) {
+          void incrementStorageMetricBy("chat_storage_large_retention_object_deleted", deletedObjectKeys.length);
+        }
+        if (deletedAttachmentIds.length > 0) {
+          void incrementStorageMetricBy("chat_storage_large_retention_db_deleted", deletedAttachmentIds.length);
+        }
+        if (failedObjectDeleteKeys.length > 0) {
+          void incrementStorageMetricBy("chat_storage_large_retention_object_delete_fail", failedObjectDeleteKeys.length);
+        }
+        if (failedDbDeleteIds.length > 0) {
+          void incrementStorageMetricBy("chat_storage_large_retention_db_delete_fail", failedDbDeleteIds.length);
+        }
+      }
+
+      return reply.send({
+        provider: config.chatStorageProvider,
+        dryRun: parsed.data.dryRun,
+        thresholdBytes: parsed.data.thresholdBytes,
+        retentionDays: parsed.data.retentionDays,
+        cutoffIso,
+        scannedCount: candidates.length,
+        deleteLimit: parsed.data.maxDelete,
+        deletedObjectCount: deletedObjectKeys.length,
+        deletedAttachmentCount: deletedAttachmentIds.length,
+        failedObjectDeleteCount: failedObjectDeleteKeys.length,
+        failedDbDeleteCount: failedDbDeleteIds.length,
+        sampleCandidates: candidates.slice(0, 20).map((candidate) => ({
+          id: candidate.id,
+          storageKey: candidate.storage_key,
+          sizeBytes: Number(candidate.size_bytes || 0),
+          sizeClass: candidate.size_class,
+          expiresAt: candidate.expires_at,
+          createdAt: candidate.created_at
+        })),
+        failedObjectDeleteKeys: failedObjectDeleteKeys.slice(0, 20),
+        failedDbDeleteIds: failedDbDeleteIds.slice(0, 20)
+      });
+    }
+  );
+
+  fastify.post<{ Body: unknown }>(
     "/v1/chat/uploads/init",
     {
       preHandler: [requireAuth, requireServiceAccess, limitUploadInit]
@@ -1072,6 +1193,7 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
       );
 
       const message = insertedMessage.rows[0];
+      const attachmentMetadata = deriveAttachmentMetadata(reservation.sizeBytes, message.created_at);
 
       const insertedAttachment = await db.query<MessageAttachmentRow>(
         `INSERT INTO message_attachments (
@@ -1081,12 +1203,14 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
            download_url,
            mime_type,
            size_bytes,
+           size_class,
+           expires_at,
            width,
            height,
            checksum
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-         RETURNING id, message_id, type, storage_key, download_url, mime_type, size_bytes, width, height, checksum, created_at`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         RETURNING id, message_id, type, storage_key, download_url, mime_type, size_bytes, size_class, expires_at, width, height, checksum, created_at`,
         [
           message.id,
           attachmentType,
@@ -1094,6 +1218,8 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
           downloadUrl,
           reservation.mimeType,
           reservation.sizeBytes,
+          attachmentMetadata.sizeClass,
+          attachmentMetadata.expiresAt,
           width,
           height,
           parsed.data.checksum || uploadedObject.checksum || null
@@ -1111,7 +1237,7 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
         );
       }
 
-      const attachment = insertedAttachment.rows[0];
+      const attachment = enrichMessageAttachmentRow(insertedAttachment.rows[0]);
       const responseMessage: RoomMessageRow = {
         id: message.id,
         room_id: message.room_id,
@@ -1143,6 +1269,8 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
             downloadUrl: attachment.download_url,
             mimeType: attachment.mime_type,
             sizeBytes: attachment.size_bytes,
+            sizeClass: attachment.size_class,
+            expiresAt: attachment.expires_at,
             width: attachment.width,
             height: attachment.height,
             checksum: attachment.checksum
@@ -1460,6 +1588,7 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
         message = insertedMessage.rows[0];
 
         for (const item of prepared) {
+          const attachmentMetadata = deriveAttachmentMetadata(item.reservation.sizeBytes, message.created_at);
           const insertedAttachment = await db.query<MessageAttachmentRow>(
             `INSERT INTO message_attachments (
                message_id,
@@ -1468,12 +1597,14 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
                download_url,
                mime_type,
                size_bytes,
+               size_class,
+               expires_at,
                width,
                height,
                checksum
              )
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-             RETURNING id, message_id, type, storage_key, download_url, mime_type, size_bytes, width, height, checksum, created_at`,
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+             RETURNING id, message_id, type, storage_key, download_url, mime_type, size_bytes, size_class, expires_at, width, height, checksum, created_at`,
             [
               message.id,
               item.attachmentType,
@@ -1481,12 +1612,14 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
               item.downloadUrl,
               item.reservation.mimeType,
               item.reservation.sizeBytes,
+              attachmentMetadata.sizeClass,
+              attachmentMetadata.expiresAt,
               item.width,
               item.height,
               item.checksum
             ]
           );
-          insertedAttachments.push(insertedAttachment.rows[0]);
+          insertedAttachments.push(enrichMessageAttachmentRow(insertedAttachment.rows[0]));
         }
 
         await db.query("COMMIT");
@@ -1538,6 +1671,8 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
           downloadUrl: attachment.download_url,
           mimeType: attachment.mime_type,
           sizeBytes: attachment.size_bytes,
+          sizeClass: attachment.size_class,
+          expiresAt: attachment.expires_at,
           width: attachment.width,
           height: attachment.height,
           checksum: attachment.checksum

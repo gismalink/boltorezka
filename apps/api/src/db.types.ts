@@ -99,6 +99,8 @@ export type MessageAttachmentRow = {
   download_url: string | null;
   mime_type: string;
   size_bytes: number;
+  size_class?: "small" | "large";
+  expires_at?: string | null;
   width: number | null;
   height: number | null;
   checksum: string | null;

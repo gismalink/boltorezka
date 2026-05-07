@@ -219,6 +219,8 @@ export type ChatAttachmentPayload = {
   downloadUrl: string | null;
   mimeType: string;
   sizeBytes: number;
+  sizeClass?: "small" | "large";
+  expiresAt?: string | null;
   width: number | null;
   height: number | null;
   checksum: string | null;

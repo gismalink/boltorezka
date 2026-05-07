@@ -41,6 +41,10 @@ Scheduler-friendly fallback (no secret in git):
 - `SLO_NACK_RATE_30M=0.08`
 - `SLO_RECONNECT_SPIKE_30M=60`
 - `SLO_INITIAL_STATE_LAG_AVG_MS_30M=15000`
+- `SLO_LARGE_RETENTION_FAIL_30M_MAX=0`
+
+Additional guard:
+- rolling 30m sum of `chat_storage_large_retention_*_delete_fail` must stay `<= SLO_LARGE_RETENTION_FAIL_30M_MAX`.
 
 In strict mode (`SLO_STRICT=1`), alert state exits non-zero.
 

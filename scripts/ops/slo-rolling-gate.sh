@@ -20,6 +20,7 @@ SLO_NACK_RATE_5M="${SLO_NACK_RATE_5M:-0.12}"
 SLO_NACK_RATE_30M="${SLO_NACK_RATE_30M:-0.08}"
 SLO_RECONNECT_SPIKE_30M="${SLO_RECONNECT_SPIKE_30M:-60}"
 SLO_INITIAL_STATE_LAG_AVG_MS_30M="${SLO_INITIAL_STATE_LAG_AVG_MS_30M:-15000}"
+SLO_LARGE_RETENTION_FAIL_30M_MAX="${SLO_LARGE_RETENTION_FAIL_30M_MAX:-0}"
 
 if [[ -z "$SLO_BEARER_TOKEN" && -n "$SLO_BEARER_TOKEN_FILE" && -f "$SLO_BEARER_TOKEN_FILE" ]]; then
   token_line="$(grep -E "^${SLO_BEARER_TOKEN_FILE_KEY}=" "$SLO_BEARER_TOKEN_FILE" | tail -n 1 || true)"
@@ -59,7 +60,9 @@ const snapshot = {
     call_initial_state_lag_samples: num(m.call_initial_state_lag_samples),
     call_offer_rate_limited: num(m.call_offer_rate_limited),
     call_glare_suspected: num(m.call_glare_suspected),
-    call_signal_target_miss: num(m.call_signal_target_miss)
+    call_signal_target_miss: num(m.call_signal_target_miss),
+    chat_storage_large_retention_object_delete_fail: num(m.chat_storage_large_retention_object_delete_fail),
+    chat_storage_large_retention_db_delete_fail: num(m.chat_storage_large_retention_db_delete_fail)
   }
 };
 
@@ -170,7 +173,7 @@ process.stdout.write(JSON.stringify({
 NODE
 )"
 
-analysis_json="$(node - "$delta_json" "$SLO_MIN_ACK_5M" "$SLO_MIN_ACK_30M" "$SLO_NACK_RATE_5M" "$SLO_NACK_RATE_30M" "$SLO_RECONNECT_SPIKE_30M" "$SLO_INITIAL_STATE_LAG_AVG_MS_30M" <<'NODE'
+analysis_json="$(node - "$delta_json" "$SLO_MIN_ACK_5M" "$SLO_MIN_ACK_30M" "$SLO_NACK_RATE_5M" "$SLO_NACK_RATE_30M" "$SLO_RECONNECT_SPIKE_30M" "$SLO_INITIAL_STATE_LAG_AVG_MS_30M" "$SLO_LARGE_RETENTION_FAIL_30M_MAX" <<'NODE'
 const payload = JSON.parse(process.argv[2] || "{}");
 const minAck5 = Number(process.argv[3] || 20);
 const minAck30 = Number(process.argv[4] || 80);
@@ -178,6 +181,7 @@ const nackRate5Limit = Number(process.argv[5] || 0.12);
 const nackRate30Limit = Number(process.argv[6] || 0.08);
 const reconnectSpike30Limit = Number(process.argv[7] || 60);
 const lagAvg30Limit = Number(process.argv[8] || 15000);
+const largeRetentionFail30Max = Number(process.argv[9] || 0);
 
 if (!payload.ok) {
   process.stdout.write(JSON.stringify({ ok: false, status: "unknown", alerts: ["insufficient snapshots"] }));
@@ -198,6 +202,9 @@ const reconnect30 = Number(m30.call_reconnect_joined || 0);
 const lagSamples30 = Number(m30.call_initial_state_lag_samples || 0);
 const lagTotal30 = Number(m30.call_initial_state_lag_ms_total || 0);
 const lagAvg30 = lagSamples30 > 0 ? lagTotal30 / lagSamples30 : 0;
+const largeRetentionFail30 =
+  Number(m30.chat_storage_large_retention_object_delete_fail || 0)
+  + Number(m30.chat_storage_large_retention_db_delete_fail || 0);
 
 const alerts = [];
 
@@ -212,6 +219,9 @@ if (reconnect30 > reconnectSpike30Limit) {
 }
 if (lagSamples30 >= 5 && lagAvg30 > lagAvg30Limit) {
   alerts.push(`initial_state_lag_avg_30m=${lagAvg30.toFixed(1)}ms > ${lagAvg30Limit}ms`);
+}
+if (largeRetentionFail30 > largeRetentionFail30Max) {
+  alerts.push(`large_retention_delete_fail_30m=${largeRetentionFail30} > ${largeRetentionFail30Max}`);
 }
 
 process.stdout.write(JSON.stringify({
@@ -231,6 +241,7 @@ process.stdout.write(JSON.stringify({
       nack: nack30,
       nackRate: nackRate30,
       reconnect: reconnect30,
+      largeRetentionDeleteFail: largeRetentionFail30,
       initialStateLagAvgMs: lagAvg30,
       initialStateLagSamples: lagSamples30
     }
@@ -267,6 +278,7 @@ const lines = [
   `- NACK delta: ${analysis.windows?.m30?.nack ?? 0}`,
   `- NACK rate: ${Number(analysis.windows?.m30?.nackRate || 0).toFixed(3)}`,
   `- Reconnect delta: ${analysis.windows?.m30?.reconnect ?? 0}`,
+  `- Large retention delete fail delta: ${analysis.windows?.m30?.largeRetentionDeleteFail ?? 0}`,
   `- Initial-state lag avg: ${Number(analysis.windows?.m30?.initialStateLagAvgMs || 0).toFixed(1)} ms (${analysis.windows?.m30?.initialStateLagSamples ?? 0} samples)`,
   "",
   "## Alerts",
@@ -285,6 +297,7 @@ const env = [
   `SLO_ROLLING_30M_ACK=${Number(analysis.windows?.m30?.ack || 0)}`,
   `SLO_ROLLING_30M_NACK=${Number(analysis.windows?.m30?.nack || 0)}`,
   `SLO_ROLLING_30M_RECONNECT=${Number(analysis.windows?.m30?.reconnect || 0)}`,
+  `SLO_ROLLING_30M_LARGE_RETENTION_DELETE_FAIL=${Number(analysis.windows?.m30?.largeRetentionDeleteFail || 0)}`,
   `SLO_ROLLING_30M_INITIAL_STATE_LAG_AVG_MS=${Number(analysis.windows?.m30?.initialStateLagAvgMs || 0)}`
 ];
 
